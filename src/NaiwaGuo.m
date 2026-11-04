@@ -18,7 +18,7 @@ void NGDRegisterFLEXKingProvider(void);
 #import <math.h>
 
 static NSString *const NGPluginName = @"NaiwaGuo";
-static NSString *const NGVersion = @"0.0.3";
+static NSString *const NGVersion = @"0.0.4";
 static NSString *const NGHostBundleIdentifier = @"com.phoenix.video";
 static NSString *const NGHostExecutable = @"Eggplant";
 static NSString *const NGPrefix = @"com.naiwaguo.";
@@ -2015,10 +2015,7 @@ static NSArray<NSDictionary *> *NGSettingsGroups(void) {
         @{@"title": @"字体与字号", @"subtitle": @"原生文字缩放与自定义字体", @"symbol": @"textformat.size", @"color": UIColor.systemPurpleColor, @"rows": @[
             NGSettingRow(@"全局字号与自定义字体", @"比例调节、已安装字体和字体文件导入", @"textformat.size", nil, @"typography")
         ]},
-        @{@"title": @"作者与交流", @"subtitle": @"一杯奶茶，和一群同路的人", @"symbol": @"cup.and.saucer", @"color": UIColor.systemBrownColor, @"rows": @[
-            NGSettingRow(@"请作者喝杯奶茶吧", @"感谢支持每一次更新", @"cup.and.saucer", nil, @"sponsor"),
-            NGSettingRow(@"交流群", @"QQ 交流群 · TG 通知群与交流群", @"person.2", nil, @"community")
-        ]}
+
     ];
 }
 
@@ -2103,6 +2100,7 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
 @property(nonatomic, strong) NSArray<NSDictionary *> *searchResults;
 @property(nonatomic, copy) NSDictionary *pendingSearchMatch;
 @property(nonatomic, strong) NGBrandHeaderView *brandHeader;
+@property(nonatomic, strong) UIView *supportFooter;
 @end
 
 @implementation NGSettingsViewController
@@ -2133,7 +2131,7 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
     self.definesPresentationContext = YES;
     self.groups = NGSettingsGroups();
     self.searchResults = @[];
-    self.tableView.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero];
+    [self installSupportFooter];
 }
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
@@ -2142,6 +2140,7 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
 }
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
+    [self layoutSupportFooter];
     if (self.tableView.tableHeaderView == self.brandHeader) {
         CGFloat width = self.tableView.bounds.size.width;
         CGFloat height = 80 + MAX(0,self.brandHeader.titleLabel.font.pointSize-20)*2;
@@ -2151,6 +2150,55 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
         }
     }
 }
+- (void)installSupportFooter {
+    UIView *footer = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, 136)];
+    footer.backgroundColor = UIColor.clearColor; footer.accessibilityIdentifier = @"NaiwaGuo.Settings.SupportFooter";
+    UIStackView *stack = [UIStackView new]; stack.axis = UILayoutConstraintAxisVertical; stack.spacing = 16;
+    stack.translatesAutoresizingMaskIntoConstraints = NO; [footer addSubview:stack];
+    NSArray *items = @[
+        @[@"赞赏", @"heart", @"sponsor"],
+        @[@"交流群", @"person.2", @"community"]
+    ];
+    for (NSArray *item in items) {
+        UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
+        if (@available(iOS 26.0, *)) button.configuration = [UIButtonConfiguration glassButtonConfiguration];
+        else {
+            UIButtonConfiguration *fallback = [UIButtonConfiguration tintedButtonConfiguration];
+            fallback.background.backgroundColor = [NGSettingsSurface() colorWithAlphaComponent:0.72];
+            fallback.background.cornerRadius = 28; button.configuration = fallback;
+        }
+        UIButtonConfiguration *configuration = button.configuration;
+        configuration.title = item[0]; configuration.image = [UIImage systemImageNamed:item[1]];
+        configuration.imagePadding = 10; configuration.baseForegroundColor = NGSettingsInk();
+        configuration.contentInsets = NSDirectionalEdgeInsetsMake(13, 24, 13, 24);
+        button.configuration = configuration; button.accessibilityIdentifier = [@"NaiwaGuo.Settings.Support." stringByAppendingString:item[2]];
+        button.accessibilityLabel = item[0]; button.tag = [item[2] isEqualToString:@"sponsor"] ? 1 : 2;
+        [button addTarget:self action:@selector(supportFooterTapped:) forControlEvents:UIControlEventTouchUpInside];
+        [stack addArrangedSubview:button]; [button.heightAnchor constraintEqualToConstant:48].active = YES;
+    }
+    [NSLayoutConstraint activateConstraints:@[
+        [stack.leadingAnchor constraintEqualToAnchor:footer.leadingAnchor constant:16],
+        [stack.trailingAnchor constraintEqualToAnchor:footer.trailingAnchor constant:-16],
+        [stack.topAnchor constraintEqualToAnchor:footer.topAnchor constant:8],
+        [stack.bottomAnchor constraintEqualToAnchor:footer.bottomAnchor constant:-16]
+    ]];
+    self.tableView.tableFooterView = footer; self.supportFooter = footer;
+}
+- (void)layoutSupportFooter {
+    UIView *footer = self.supportFooter; if (!footer) return;
+    CGFloat width = self.tableView.bounds.size.width; if (width <= 0) return;
+    CGFloat height = 136;
+    if (footer.frame.size.width != width || footer.frame.size.height != height) {
+        footer.frame = CGRectMake(0, 0, width, height); self.tableView.tableFooterView = footer;
+    }
+}
+- (void)supportFooterTapped:(UIButton *)button {
+    if (self.navigationController.topViewController != self || self.navigationController.transitionCoordinator) return;
+    NGSettingsFeedback();
+    NSString *action = button.tag == 1 ? @"sponsor" : @"community";
+    UIViewController *destination = NGSettingsDestinationForAction(action);
+    if (destination) [self.navigationController pushViewController:destination animated:YES];
+}
 - (void)close {
     if (self.navigationController.viewControllers.firstObject != self) [self.navigationController popViewControllerAnimated:YES];
     else [self dismissViewControllerAnimated:YES completion:nil];
@@ -2158,7 +2206,7 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
 - (BOOL)isSearching { return self.navigationItem.searchController.isActive && self.navigationItem.searchController.searchBar.text.length > 0; }
 - (void)updateSearchResultsForSearchController:(UISearchController *)searchController {
     NSString *query = [searchController.searchBar.text stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
-    if (!query.length) { self.searchResults = @[]; [self.tableView reloadData]; return; }
+    if (!query.length) { self.searchResults = @[]; self.tableView.tableFooterView = self.supportFooter; [self.tableView reloadData]; return; }
     NSMutableArray *matches = [NSMutableArray array];
     [self.groups enumerateObjectsUsingBlock:^(NSDictionary *group, NSUInteger groupIndex, BOOL *stopGroup) {
         for (NSDictionary *row in group[@"rows"]) {
@@ -2171,7 +2219,16 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
             }
         }
     }];
+    NSArray *supportRows = @[
+        NGSettingRow(@"赞赏", @"请作者喝杯奶茶吧", @"heart", nil, @"sponsor"),
+        NGSettingRow(@"交流群", @"QQ 交流群 · TG 通知群与交流群 · Telegram", @"person.2", nil, @"community")
+    ];
+    for (NSDictionary *row in supportRows) {
+        NSString *terms = [NSString stringWithFormat:@"%@ %@ %@",row[@"title"],row[@"subtitle"],[row[@"action"] isEqualToString:@"community"] ? @"TG 交流群" : @""];
+        if ([terms localizedCaseInsensitiveContainsString:query]) [matches addObject:@{@"group":@0,@"row":row,@"groupTitle":@"设置底部"}];
+    }
     self.searchResults = matches;
+    self.tableView.tableFooterView = [self isSearching] ? nil : self.supportFooter;
     [self.tableView reloadData];
 }
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
@@ -2234,7 +2291,9 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
     [self.navigationController pushViewController:destination animated:YES];
 }
 - (void)didDismissSearchController:(UISearchController *)searchController {
-    if (searchController != self.navigationItem.searchController || !self.pendingSearchMatch) return;
+    if (searchController != self.navigationItem.searchController) return;
+    self.tableView.tableFooterView = self.supportFooter;
+    if (!self.pendingSearchMatch) return;
     __weak typeof(self) weakSelf = self;
     // Let UIKit finish its own navigation-bar cleanup before starting the next transition.
     dispatch_async(dispatch_get_main_queue(), ^{ [weakSelf openPendingSearchResult]; });

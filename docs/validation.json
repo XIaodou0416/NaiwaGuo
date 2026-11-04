@@ -1,5 +1,5 @@
 {
-  "version": "0.0.3",
+  "version": "0.0.4",
   "date": "2026-11-05",
   "xcode": "27.0 (27A266a)",
   "sdk": "iOS 27.0",
@@ -22,10 +22,10 @@
   "nativeUICases": {
     "font": {
       "passed": 1,
-      "durationSeconds": 4.801055458330666,
+      "durationSeconds": 4.800695624988293,
       "profileSettingsFontNavigationCycles": 10,
       "mainThreadHeartbeats": 40,
-      "maxHeartbeatGapSeconds": 0.12093954166630283
+      "maxHeartbeatGapSeconds": 0.12103774999559391
     },
     "regular": {
       "passed": 1,
@@ -150,28 +150,30 @@
     }
   },
   "supportAndCommunityChecks": {
-    "allSixCardsFitNarrowScreen": true,
+    "allFiveCardsFitNarrowScreen": true,
     "allThreeOriginalURLsExact": true,
     "codePreservesAspectAndWhiteQuietZone": 1,
     "communityEntryOpensInvitationPage": 1,
+    "compactAndLandscapeFooterLayout": true,
     "compactAndLandscapeInvitationLayout": true,
     "compactAndLandscapeSupportLayout": true,
     "compactHomeRowAndHero": 1,
     "eachInvitationCardOpensItsURL": true,
     "embeddedCodeDecodesAtOriginalSize": 1,
+    "fiveGroupsWithoutAuthorCategory": 1,
     "invitationGlassAndPressFeedback": true,
     "newAdaptiveHeroAndVersionBadge": 1,
     "openFailureOffersCopyLink": 1,
     "reduceMotionSkipsSheenAndEntrance": 1,
     "sameOpenPageFollowsSystemTheme": 1,
     "shareSheetExcludesPhotoLibraryWrite": 1,
-    "sixGroupsAndTwoSupportEntries": 1,
     "sponsorAndAllGroupsAreSearchable": true,
-    "sponsorRowOpensSupportPage": true,
+    "sponsorFooterOpensSupportPage": true,
     "sponsorUsesRegularGlassCard": true,
-    "supportBackReturnsToCommunity": 1,
+    "supportBackReturnsToSettings": 1,
     "switchBackToLightWorks": true,
     "themeNeverForcedBySettings": 1,
+    "twoVerticalGlassFooterButtons": 1,
     "unknownActionDoesNotOpen": 1,
     "versionStartsAt001": true
   },

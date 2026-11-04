@@ -9,8 +9,8 @@ for mode in home-light home-dark dock-settings dock-sizes fonts icons community 
   xcrun simctl terminate "$DEVICE" com.naiwaguo.testhost >/dev/null 2>&1 || true
   test ! -f "$CONTAINER/Documents/preview.png" || unlink "$CONTAINER/Documents/preview.png"
   case "$mode" in
-    home-light) flags=(--preview-settings);;
-    home-dark) flags=(--preview-settings --dark);;
+    home-light) flags=(--preview-settings --scroll-bottom);;
+    home-dark) flags=(--preview-settings --dark --scroll-bottom);;
     dock-settings) flags=(--preview-settings --dock-settings);;
     dock-sizes) flags=(--preview-settings --dock-settings --scroll-bottom);;
     fonts) flags=(--preview-fonts);;

@@ -139,7 +139,7 @@ assert result['viewCount'] >= 4
 assert result['windowCount'] >= 1
 assert result['eventCount'] > 0
 assert result['performanceSamples'] >= 1
-assert result['settingsGroups'] == 6
+assert result['settingsGroups'] == 5
 assert result['playbackGlassCount'] == 5
 assert result['labelsOutsideGlass']
 assert result['compatibilityDiskUnchanged']

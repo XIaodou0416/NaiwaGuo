@@ -2,7 +2,7 @@
 
 红果短剧 iOS 原生界面定制插件。简洁设置、跟随系统浅深色、彩色功能图标与黄绿色控件点缀。
 
-**当前版本：0.0.3 · 预发布，真机效果待补充。** 公开版本从 0.0.1 开始编号。基于红果 7.4.3 接口适配，目标为 com.phoenix.video / Eggplant。
+**当前版本：0.0.4 · 预发布，真机效果待补充。** 公开版本从 0.0.1 开始编号。基于红果 7.4.3 接口适配，目标为 com.phoenix.video / Eggplant。
 
 [下载版本](https://github.com/XIaodou0416/NaiwaGuo/releases) · [安装说明](INSTALL.md) · [验证记录](docs/VALIDATION.md) · [免责声明](DISCLAIMER.md)
 
@@ -17,7 +17,6 @@
 | 图标定制 | 原版与四套动作图标；收藏/点赞按真实状态变化；支持相册图片和 SF Symbols，自定义图标优先。 |
 | 字体与字号 | 原生文字缩放 50%–100%；选择已安装字体、导入 TTF/OTF/TTC（最大 50 MB）；一键恢复。 |
 | 设置搜索 | 搜索功能后直达对应页面，开关项滚动定位并高亮。 |
-码
 
 液态玻璃及底栏收缩需要 **iOS 26+**，收缩限 iPhone。最低部署目标为 iOS 15；宿主版本、注入方式与系统私有接口会影响兼容性。字体覆盖 UILabel、UITextField、UITextView、YYLabel，不覆盖视频内文字、网页及 Compose/DanceUI 自绘文字。
 
@@ -26,7 +25,7 @@
 
 ## 安装与开发
 
-发布页提供 dylib/plist、rootful/rootless deb、源码和校验和。不要同时加载多个版本；升级后完全退出红果再打开。详见 [安装说明](INSTALL.md)。
+GitHub 发布页提供 dylib/plist、源码和校验和，不上传 deb 或包含 deb 的整包。deb 可在本地构建。不要同时加载多个版本；升级后完全退出红果再打开。详见 [安装说明](INSTALL.md)。
 
 构建需要 macOS、带 iOS 26 或更新 SDK 的 Xcode、Python 3；测试需要 iPhone 模拟器。
 
