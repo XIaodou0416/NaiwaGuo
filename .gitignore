@@ -1,0 +1,13 @@
+build/
+dist/
+.DS_Store
+*.log
+*.ipa
+*.deb
+*.dylib
+*.zip
+*.mobileprovision
+*.p12
+*.p8
+.env
+.env.*
