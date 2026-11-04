@@ -21,17 +21,6 @@
 
 液态玻璃及底栏收缩需要 **iOS 26+**，收缩限 iPhone。最低部署目标为 iOS 15；宿主版本、注入方式与系统私有接口会影响兼容性。字体覆盖 UILabel、UITextField、UITextView、YYLabel，不覆盖视频内文字、网页及 Compose/DanceUI 自绘文字。
 
-## 功能界面
-
-以下是 **0.0.3 在 iOS 模拟器中实际运行的设置界面**，不代表红果真机效果。底栏演示使用合成背景。
-
-<table>
-<tr><td align="center">设置 · 浅色</td><td align="center">设置 · 深色</td><td align="center">底栏与收缩</td></tr>
-<tr><td><img src="docs/previews/home-light.png" width="230" alt="设置浅色界面" /></td><td><img src="docs/previews/home-dark.png" width="230" alt="设置深色界面" /></td><td><img src="docs/previews/dock-settings.png" width="230" 
-</table>
-
-[更多底栏、收缩与交流入口截图](docs/SCREENSHOTS.md)
-
 
 字段与限制见 [调试工具说明](docs/DEBUG_TOOLS.md)。没有取得可读 PCM 时会写明实际观测和覆盖情况，不伪造 WAV。
 
