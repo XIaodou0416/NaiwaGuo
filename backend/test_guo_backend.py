@@ -15,7 +15,7 @@ class UsageTests(unittest.TestCase):
             def post(self): return 'existing-post'
             def reply(self, value, status=200): self.result = (status, value)
             def fail(self, status, message): self.result = (status, message)
-            def session(self): return self.authenticated
+            def session(self): return {'csrf': 'fixture'} if self.authenticated else None
             def client_ip(self): return '127.0.0.1'
             def body(self): return self.payload
 
@@ -25,11 +25,13 @@ class UsageTests(unittest.TestCase):
 
     def tearDown(self): self.temp.cleanup()
 
-    def request(self, path, body=None, authenticated=True):
+    def request(self, path, body=None, authenticated=True, csrf=True, origin=True):
         target = self.handler(); target.path = path; target.authenticated = authenticated
         target.payload = self.body.copy() if body is None else body
         target.headers = {'Content-Length': str(len(json.dumps(target.payload)))}
-        value = target.get() if path.startswith('/api/admin') else target.post()
+        if csrf: target.headers['X-CSRF-Token'] = 'fixture'
+        if origin: target.headers['Origin'] = 'https://naiwa.xxdou.icu'
+        value = target.post() if path.endswith('/ban') or not path.startswith('/api/admin') else target.get()
         return getattr(target, 'result', value)
 
     def test_dedup_versions_and_admin_auth(self):
@@ -68,6 +70,31 @@ class UsageTests(unittest.TestCase):
     def test_existing_routes_unchanged(self):
         self.assertEqual(self.request('/api/v1/check'), 'existing-post')
         self.assertEqual(self.request('/api/admin/stats'), 'existing-get')
+
+    def test_ban_requires_session_csrf_and_origin(self):
+        body = {'hongguo_id': '123456', 'blocked': True}
+        self.assertEqual(self.request('/api/admin/guo/ban', body, authenticated=False)[0], 401)
+        self.assertEqual(self.request('/api/admin/guo/ban', body, csrf=False)[0], 403)
+        self.assertEqual(self.request('/api/admin/guo/ban', body, origin=False)[0], 403)
+        for invalid in [{'hongguo_id': '', 'blocked': True}, {'hongguo_id': '123', 'blocked': 1}, {'hongguo_id': "1'", 'blocked': True}]:
+            self.assertEqual(self.request('/api/admin/guo/ban', invalid)[0], 400)
+        self.assertEqual(self.request('/api/admin/guo/bans')[1]['items'], [])
+
+    def test_ban_unban_multiple_installations_and_forget(self):
+        body = {'hongguo_id': '123456', 'blocked': True, 'note': '<test>'}
+        self.assertEqual(self.request('/api/admin/guo/ban', body)[0], 200)
+        self.assertTrue(self.request('/api/guo/v1/usage')[1]['blocked'])
+        second = {**self.body, 'installation': '00000000-0000-4000-8000-000000000002'}
+        self.assertTrue(self.request('/api/guo/v1/usage', second)[1]['blocked'])
+        self.assertTrue(self.request('/api/admin/guo/users')[1]['items'][0]['blocked'])
+        self.request('/api/guo/v1/forget')
+        self.assertTrue(self.request('/api/guo/v1/usage')[1]['blocked'])
+        self.assertFalse(self.request('/api/guo/v1/usage', {**self.body, 'hongguo_id': '999'})[1]['blocked'])
+        self.assertFalse(self.request('/api/guo/v1/usage', {**self.body, 'hongguo_id': ''})[1]['blocked'])
+        self.assertEqual(self.request('/api/admin/guo/stats')[1]['blockedUsers'], 1)
+        self.request('/api/admin/guo/ban', {**body, 'blocked': False})
+        self.assertFalse(self.request('/api/guo/v1/usage', second)[1]['blocked'])
+        self.assertEqual(self.request('/api/admin/guo/bans')[1]['items'], [])
 
 
 if __name__ == '__main__': unittest.main()

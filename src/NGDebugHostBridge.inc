@@ -27,7 +27,7 @@ NSString *NGDTabBarProbeReport(void) {
     NGSystemDock *dock=NGDebugCurrentDock();
     NSMutableDictionary *preferences=[NSMutableDictionary dictionary];
     for (NSString *key in @[NGPreferenceDock,NGPreferenceDockClear,NGPreferenceDockCollapse,NGPreferenceDockHeight,NGPreferenceDockLength,NGPreferenceDockSearchSize,NGPreferenceDockContent,NGPreferenceDockAvatar,NGPreferenceDockAction,NGPreferenceDockHaptics,NGPreferenceDockSelectedColor,NGPreferenceDockNormalColor,NGPreferencePlaybackPreset,NGPreferencePlaybackFullscreen,NGPreferenceCollectionGlass,NGPreferencePlaybackGlass,NGPreferenceCommentGlass,NGPreferenceShareGlass,NGPreferenceFontScale,NGPreferenceFontName]) {
-        id value=[NSUserDefaults.standardUserDefaults objectForKey:key];
+        id value=NGFeatureObject(key);
         if ([value isKindOfClass:NSString.class] || [value isKindOfClass:NSNumber.class]) preferences[key]=value;
         if (([key isEqual:NGPreferenceDockSelectedColor] || [key isEqual:NGPreferenceDockNormalColor]) && [value isKindOfClass:NSArray.class] && [value count]==4) preferences[key]=value;
     }

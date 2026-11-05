@@ -13,7 +13,7 @@ static NSArray<NSString *> *NGPlaybackActionClassNames(void) {
 static NSArray<NSString *> *NGPlaybackPresets(void) { return @[@"original", @"soft", @"bold", @"badge", @"duotone"]; }
 static NSArray<NSString *> *NGPlaybackPresetTitles(void) { return @[@"保留原版", @"极简细线", @"圆润实心", @"轻巧线框", @"柔彩双色"]; }
 static NSString *NGPlaybackCurrentPreset(void) {
-    NSString *preset = [NSUserDefaults.standardUserDefaults stringForKey:NGPreferencePlaybackPreset];
+    NSString *preset = NGFeatureString(NGPreferencePlaybackPreset);
     return [NGPlaybackPresets() containsObject:preset] ? preset : @"original";
 }
 
@@ -61,7 +61,7 @@ static void NGRestorePlaybackPreset(UIView *action) {
 static NSString *NGPlaybackCustomSymbol(NSUInteger index, BOOL selected) {
     NSArray *names = @[@"collect", @"comment", @"like", @"share"];
     NSString *key = [NSString stringWithFormat:@"com.naiwaguo.playback.custom.%@.%@", names[MIN(index, names.count - 1)], selected ? @"selected" : @"normal"];
-    return [NSUserDefaults.standardUserDefaults stringForKey:key];
+    return NGFeatureString(key);
 }
 static NSString *NGPlaybackCustomImageKey(NSUInteger index, BOOL selected) {
     NSArray *names = @[@"collect", @"comment", @"like", @"share"];
@@ -70,7 +70,7 @@ static NSString *NGPlaybackCustomImageKey(NSUInteger index, BOOL selected) {
 static BOOL NGPlaybackHasCustomForAction(NSUInteger index) {
     for (NSNumber *selected in @[@NO, @YES]) {
         if (NGPlaybackCustomSymbol(index, selected.boolValue).length ||
-            [NSUserDefaults.standardUserDefaults dataForKey:NGPlaybackCustomImageKey(index, selected.boolValue)].length) return YES;
+            NGFeatureData(NGPlaybackCustomImageKey(index, selected.boolValue)).length) return YES;
     }
     return NO;
 }
@@ -161,7 +161,7 @@ static UIImage *NGPlaybackVectorIcon(NSUInteger index,BOOL selected,NSString *pr
     return [image imageWithRenderingMode:duo || (selected && (index==0 || index==2)) ? UIImageRenderingModeAlwaysOriginal : UIImageRenderingModeAlwaysTemplate];
 }
 static UIImage *NGPlaybackIconPreview(NSUInteger index, BOOL selected, NSString *preset) {
-    NSData *data = [NSUserDefaults.standardUserDefaults dataForKey:NGPlaybackCustomImageKey(index, selected)];
+    NSData *data = NGFeatureData(NGPlaybackCustomImageKey(index, selected));
     NSString *custom = NGPlaybackCustomSymbol(index, selected);
     NSString *key = [NSString stringWithFormat:@"%@|%lu|%d|%@|%lu", preset, (unsigned long)index, selected, custom ?: @"", (unsigned long)data.hash];
     static NSCache<NSString *, UIImage *> *cache;
@@ -196,7 +196,7 @@ static void NGApplyPlaybackPreset(UIView *action, NSUInteger actionIndex) {
     NSNumber *nativeSelection=NGPlaybackNativeSelection(action);
     BOOL selected = actionIndex == 0 || actionIndex == 2 ? (nativeSelection ? nativeSelection.boolValue : (NGPlaybackActionSelected(action) || icon.highlighted)) : NO;
     NSString *custom = NGPlaybackCustomSymbol(actionIndex, selected);
-    NSData *customData = [NSUserDefaults.standardUserDefaults dataForKey:NGPlaybackCustomImageKey(actionIndex, selected)];
+    NSData *customData = NGFeatureData(NGPlaybackCustomImageKey(actionIndex, selected));
     UIImage *customImage = customData.length ? NGPlaybackIconPreview(actionIndex, selected, preset) : nil;
     NGPlaybackPresetState *state = objc_getAssociatedObject(action, &NGPlaybackPresetAssociation);
     if (state.applying) return;
@@ -291,7 +291,7 @@ static void NGRefreshPlaybackPresetIcons(void) {
         BOOL selected = [selectedStates[path.row] boolValue];
         UIImage *preview = NGPlaybackIconPreview(actionIndex, selected, NGPlaybackCurrentPreset());
         cell.textLabel.text = names[path.row];
-        BOOL custom = NGPlaybackCustomSymbol(actionIndex, selected).length || [NSUserDefaults.standardUserDefaults dataForKey:NGPlaybackCustomImageKey(actionIndex, selected)].length;
+        BOOL custom = NGPlaybackCustomSymbol(actionIndex, selected).length || NGFeatureData(NGPlaybackCustomImageKey(actionIndex, selected)).length;
         cell.detailTextLabel.text = custom ? @"已自定义" : NGPlaybackPresetTitles()[[NGPlaybackPresets() indexOfObject:NGPlaybackCurrentPreset()]];
         cell.imageView.image = preview;
         cell.imageView.tintColor = UIColor.systemBlueColor;
@@ -319,7 +319,7 @@ static void NGRefreshPlaybackPresetIcons(void) {
         [menu addAction:[UIAlertAction actionWithTitle:@"从照片上传" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) { NGPresentIconPhotoPicker(self, imageKey); }]];
         [menu addAction:[UIAlertAction actionWithTitle:@"输入 SF Symbols 名称" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
             UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"输入图标名称" message:@"例如 heart.fill、star.fill、hand.thumbsup.fill" preferredStyle:UIAlertControllerStyleAlert];
-            [alert addTextFieldWithConfigurationHandler:^(UITextField *field) { field.text = [NSUserDefaults.standardUserDefaults stringForKey:key]; field.placeholder = @"heart.fill"; field.autocapitalizationType = UITextAutocapitalizationTypeNone; }];
+            [alert addTextFieldWithConfigurationHandler:^(UITextField *field) { field.text = NGFeatureString(key); field.placeholder = @"heart.fill"; field.autocapitalizationType = UITextAutocapitalizationTypeNone; }];
             [alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
             [alert addAction:[UIAlertAction actionWithTitle:@"保存" style:UIAlertActionStyleDefault handler:^(UIAlertAction *save) {
                 NSString *symbol = alert.textFields.firstObject.text;

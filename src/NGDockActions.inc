@@ -2,10 +2,10 @@ static NSArray<NSString *> *NGDockActions(void) { return @[@"search",@"home",@"t
 static NSArray<NSString *> *NGDockActionTitles(void) { return @[@"搜索短剧",@"首页",@"剧场",@"商城",@"我的",@"插件设置"]; }
 static NSArray<NSString *> *NGDockActionSymbols(void) { return @[@"magnifyingglass",@"house",@"play.square",@"storefront",@"person.crop.circle",@"slider.horizontal.3"]; }
 static NSString *NGDockAction(void) {
-    NSString *action=[NSUserDefaults.standardUserDefaults stringForKey:NGPreferenceDockAction];
+    NSString *action=NGFeatureString(NGPreferenceDockAction);
     return [NGDockActions() containsObject:action] ? action : @"search";
 }
-static BOOL NGDockAvatarEnabled(void) { return [NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceDockAvatar]; }
+static BOOL NGDockAvatarEnabled(void) { return NGFeatureBool(NGPreferenceDockAvatar); }
 static __weak UIImageView *NGDockAvatarSource;
 static UIImage *NGDockAvatarPhoto,*NGDockAvatarCircle;
 static CFTimeInterval NGDockAvatarLastScan;

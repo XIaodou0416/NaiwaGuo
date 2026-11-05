@@ -28,7 +28,7 @@ static void NGDockUnderlayApply(UIView *view) {
     UIView *root = state.root;
     if (!state || NGDockUnderlayApplying) return;
     if (!root || !root.window || root.window.windowLevel != UIWindowLevelNormal ||
-        ![NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceDock] ||
+        !NGFeatureBool(NGPreferenceDock) ||
         ![view isDescendantOfView:root] || !CGAffineTransformIsIdentity(view.transform)) { NGDockUnderlayRestore(view); return; }
     if (!CGRectEqualToRect(view.frame, state.applied)) state.source = view.frame;
     CGRect originalInRoot = [view.superview convertRect:state.source toView:root];
@@ -58,7 +58,7 @@ static BOOL NGDockUnderlayRoot(UIView *view) {
 }
 static void NGDockUnderlayRefresh(UIView *root) {
     if (NGDockUnderlayApplying || !root.window || !NGDockUnderlayRoot(root) || !NSThread.isMainThread) return;
-    if (![NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceDock]) {
+    if (!NGFeatureBool(NGPreferenceDock)) {
         for (UIView *view in NGDockUnderlayViews.allObjects) if (((NGDockUnderlayState *)objc_getAssociatedObject(view, &NGDockUnderlayStateKey)).root == root) NGDockUnderlayRestore(view);
         return;
     }

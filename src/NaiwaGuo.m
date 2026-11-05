@@ -18,7 +18,7 @@ void NGDRegisterFLEXKingProvider(void);
 #import <math.h>
 
 static NSString *const NGPluginName = @"奶蛙";
-static NSString *const NGVersion = @"0.1.0";
+static NSString *const NGVersion = @"0.1.1";
 static NSString *const NGHostBundleIdentifier = @"com.phoenix.video";
 static NSString *const NGHostExecutable = @"Eggplant";
 static NSString *const NGPrefix = @"com.naiwaguo.";
@@ -33,7 +33,7 @@ static NSString *const NGPreferencePlaybackHeaderGlass = @"com.naiwaguo.playback
 static NSString *const NGPreferenceChannelRestoreMigration = @"com.naiwaguo.migration.restoreChannels.070";
 static NSString *const NGPreferenceRuntimeGlass = @"com.naiwaguo.appearance.runtimeGlass";
 static NSString *const NGIdentifierPrefix = @"NaiwaGuo.";
-
+#include "NGFeatureAccess.inc"
 
 static BOOL NGRuntimeGlassRequested;
 static BOOL NGRuntimeGlassHooksInstalled;
@@ -957,7 +957,7 @@ static void NGPresentIconPhotoPicker(UIViewController *presenter, NSString *pref
 static NSString *const NGPreferencePlaybackRailX = @"com.naiwaguo.playback.rail.x";
 static NSString *const NGPreferencePlaybackRailY = @"com.naiwaguo.playback.rail.y";
 static NSString *const NGPreferencePlaybackRailScale = @"com.naiwaguo.playback.rail.scale";
-static BOOL NGPlaybackElementHidden(NSString *identifier) { return [NSUserDefaults.standardUserDefaults boolForKey:[@"com.naiwaguo.playback.hidden." stringByAppendingString:identifier]]; }
+static BOOL NGPlaybackElementHidden(NSString *identifier) { return NGFeatureBool([@"com.naiwaguo.playback.hidden." stringByAppendingString:identifier]); }
 static void NGUpdatePlaybackTextLayout(void);
 static void NGUpdatePlaybackHeaderGlass(void);
 static void NGRefreshPlaybackActionAppearance(UIView *item);
@@ -1053,7 +1053,6 @@ static void NGApplyPlaybackRailLayout(UIView *rail) {
         CGFloat y1 = CGRectGetMinY(left.sourceFrame), y2 = CGRectGetMinY(right.sourceFrame);
         return y1 < y2 ? NSOrderedAscending : (y1 > y2 ? NSOrderedDescending : NSOrderedSame);
     }];
-    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
     CGFloat y = MAX(0, baselineBottom - totalHeight);
     for (UIView *item in visible) {
         NGPlaybackRailItemState *state = objc_getAssociatedObject(item, &NGPlaybackRailItemAssociation);
@@ -1063,8 +1062,8 @@ static void NGApplyPlaybackRailLayout(UIView *rail) {
     NGPlaybackRailTransformState *transform = objc_getAssociatedObject(rail, &NGPlaybackRailTransformAssociation);
     if (!transform) { transform = [NGPlaybackRailTransformState new]; transform.source = rail.transform; objc_setAssociatedObject(rail, &NGPlaybackRailTransformAssociation, transform, OBJC_ASSOCIATION_RETAIN_NONATOMIC); }
     else if (!CGAffineTransformEqualToTransform(rail.transform, transform.applied)) transform.source = rail.transform;
-    CGFloat dx = [defaults floatForKey:NGPreferencePlaybackRailX], dy = [defaults floatForKey:NGPreferencePlaybackRailY];
-    CGFloat scale = [defaults objectForKey:NGPreferencePlaybackRailScale] ? [defaults floatForKey:NGPreferencePlaybackRailScale] : 1.0;
+    CGFloat dx = NGFeatureFloat(NGPreferencePlaybackRailX), dy = NGFeatureFloat(NGPreferencePlaybackRailY);
+    CGFloat scale = NGFeatureObject(NGPreferencePlaybackRailScale) ? NGFeatureFloat(NGPreferencePlaybackRailScale) : 1.0;
     CGAffineTransform scaled = CGAffineTransformScale(transform.source, MAX(0.5, MIN(1.6, scale)), MAX(0.5, MIN(1.6, scale)));
     CGAffineTransform configured = scaled; configured.tx += dx; configured.ty += dy;
     rail.transform = configured; transform.applied = configured;
@@ -1074,7 +1073,7 @@ static char NGPlaybackGlassAssociationKey;
 static NSHashTable<UIView *> *NGPlaybackInteractionViews;
 
 static BOOL NGPlaybackGlassEnabled(void) {
-    return [NSUserDefaults.standardUserDefaults boolForKey:NGPreferencePlaybackGlass];
+    return NGFeatureBool(NGPreferencePlaybackGlass);
 }
 
 static UIColor *NGPlaybackLayerColor(CALayer *layer) {
@@ -1237,7 +1236,7 @@ static void NGSetPlaybackHeaderHidden(UIView *view, BOOL hidden) {
 @end
 
 static BOOL NGPlaybackHeaderGlassEnabled(void) {
-    return [NSUserDefaults.standardUserDefaults boolForKey:NGPreferencePlaybackHeaderGlass];
+    return NGFeatureBool(NGPreferencePlaybackHeaderGlass);
 }
 
 static void NGApplyPlaybackHeaderGlassToTarget(UIView *target, NSString *kind, CGFloat inset, CGFloat radius) {
@@ -1367,10 +1366,9 @@ static UIView *NGPlaybackDramaTitleRow(UIView *container) {
 }
 static void NGApplyPlaybackTextPreferences(UIView *view, NSString *kind) {
     NSString *prefix = [@"com.naiwaguo.playback.layout." stringByAppendingString:kind];
-    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
-    CGFloat scale = [defaults objectForKey:[prefix stringByAppendingString:@".scale"]] ? [defaults floatForKey:[prefix stringByAppendingString:@".scale"]] : 1;
-    NGApplyPlaybackTextTransform(view, [defaults floatForKey:[prefix stringByAppendingString:@".x"]],
-                                 [defaults floatForKey:[prefix stringByAppendingString:@".y"]], MAX(0.5, MIN(1.6, scale)));
+    CGFloat scale = NGFeatureObject([prefix stringByAppendingString:@".scale"]) ? NGFeatureFloat([prefix stringByAppendingString:@".scale"]) : 1;
+    NGApplyPlaybackTextTransform(view, NGFeatureFloat([prefix stringByAppendingString:@".x"]),
+                                 NGFeatureFloat([prefix stringByAppendingString:@".y"]), MAX(0.5, MIN(1.6, scale)));
 }
 static NSArray<NSString *> *NGPlaybackTextClassNames(void) {
     static NSArray<NSString *> *names;
@@ -1389,8 +1387,8 @@ static void NGDecoratePlaybackTextView(UIView *view) {
         if (NGIsDanmakuEntranceName(name)) NGDecorateDanmakuEntrance(view);
         if ([name containsString:@"OutterSeriesInfoView"] || [name containsString:@"DerivateInfoView"]) {
             NSString *prefix = @"com.naiwaguo.playback.layout.author";
-            CGFloat dx = [NSUserDefaults.standardUserDefaults floatForKey:[prefix stringByAppendingString:@".x"]], dy = [NSUserDefaults.standardUserDefaults floatForKey:[prefix stringByAppendingString:@".y"]];
-            CGFloat scale = [NSUserDefaults.standardUserDefaults objectForKey:[prefix stringByAppendingString:@".scale"]] ? [NSUserDefaults.standardUserDefaults floatForKey:[prefix stringByAppendingString:@".scale"]] : 1;
+            CGFloat dx = NGFeatureFloat([prefix stringByAppendingString:@".x"]), dy = NGFeatureFloat([prefix stringByAppendingString:@".y"]);
+            CGFloat scale = NGFeatureObject([prefix stringByAppendingString:@".scale"]) ? NGFeatureFloat([prefix stringByAppendingString:@".scale"]) : 1;
             NSMutableArray *desc = [NSMutableArray arrayWithArray:view.subviews];
             for (NSUInteger j = 0; j < desc.count && j < 600; j++) { UIView *label = desc[j]; if ([label isKindOfClass:UILabel.class] && [((UILabel *)label).text hasPrefix:@"@"] ) NGSetPlaybackHeaderHidden(label, NGPlaybackElementHidden(@"text.author")); [desc addObjectsFromArray:label.subviews]; }
             UIView *authorRow = nil;
@@ -1413,8 +1411,8 @@ static void NGDecoratePlaybackTextView(UIView *view) {
         if (description || notice) {
             NSString *kind = notice ? @"notice" : @"description";
             NSString *prefix = [@"com.naiwaguo.playback.layout." stringByAppendingString:kind];
-            CGFloat dx = [NSUserDefaults.standardUserDefaults floatForKey:[prefix stringByAppendingString:@".x"]], dy = [NSUserDefaults.standardUserDefaults floatForKey:[prefix stringByAppendingString:@".y"]];
-            CGFloat scale = [NSUserDefaults.standardUserDefaults objectForKey:[prefix stringByAppendingString:@".scale"]] ? [NSUserDefaults.standardUserDefaults floatForKey:[prefix stringByAppendingString:@".scale"]] : 1;
+            CGFloat dx = NGFeatureFloat([prefix stringByAppendingString:@".x"]), dy = NGFeatureFloat([prefix stringByAppendingString:@".y"]);
+            CGFloat scale = NGFeatureObject([prefix stringByAppendingString:@".scale"]) ? NGFeatureFloat([prefix stringByAppendingString:@".scale"]) : 1;
             BOOL hidden = NGPlaybackElementHidden([@"text." stringByAppendingString:kind]);
             if (notice) { NGSetPlaybackHeaderHidden(view, hidden); NGApplyPlaybackTextTransform(view, dx, dy, scale); }
             else {
@@ -1596,7 +1594,7 @@ static void NGDismissLivePreview(void);
             slider.accessibilityIdentifier = key;
             slider.minimumValue = scale ? 0.65 : -100;
             slider.maximumValue = scale ? 1.4 : 100;
-            NSNumber *saved = [NSUserDefaults.standardUserDefaults objectForKey:key];
+            NSNumber *saved = NGFeatureObject(key);
             slider.value = saved ? saved.floatValue : (scale ? 1.0 : 0.0);
             [slider addTarget:self action:@selector(sliderChanged:) forControlEvents:UIControlEventValueChanged];
             [row addSubview:name]; [row addSubview:value]; [row addSubview:slider];
@@ -1654,7 +1652,7 @@ static void NGDismissLivePreview(void);
     CGFloat width = MIN(360, CGRectGetWidth(self.view.bounds) - 24);
     CGPoint origin = CGPointMake(12, CGRectGetHeight(self.view.bounds) - safeBottom - height - 10);
     if (!self.isDragging) {
-        NSString *saved = [NSUserDefaults.standardUserDefaults stringForKey:@"com.naiwaguo.preview.panelOrigin"];
+        NSString *saved = NGFeatureString(@"com.naiwaguo.preview.panelOrigin");
         if (saved.length) origin = CGPointFromString(saved);
     } else {
         origin = self.panel.frame.origin;
@@ -1768,7 +1766,7 @@ static void NGOpenSettings(void) {
         }];
         if (accepted) return;
     }
-    if ([NGClassName(presenter) hasPrefix:@"NGSettings"]) return;
+    if ([presenter isKindOfClass:NGSettingsTableController.class] || [NGClassName(presenter) hasPrefix:@"NGSettings"]) return;
     if (presenter.isBeingPresented || presenter.isBeingDismissed) return;
     if ([presenter isKindOfClass:NGSettingsViewController.class] || [presenter isKindOfClass:UINavigationController.class]) {
         if ([presenter isKindOfClass:UINavigationController.class] && [((UINavigationController *)presenter).topViewController isKindOfClass:NGSettingsViewController.class]) return;
@@ -1781,6 +1779,8 @@ static void NGOpenSettings(void) {
     [presenter presentViewController:nav animated:YES completion:nil];
     NGLog(@"settings", @"opened", nil);
 }
+
+#include "NGSettingsGesture.inc"
 
 static UIImage *NGHostIcon(void) {
     NSDictionary *icons = NSBundle.mainBundle.infoDictionary[@"CFBundleIcons"];
@@ -1881,7 +1881,7 @@ static NSArray<NSArray<NSDictionary *> *> *NGPlaybackVisibilityItems(void) {
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)path {
     NSDictionary *item = NGPlaybackVisibilityItems()[path.section][path.row]; NSString *key = [@"com.naiwaguo.playback.hidden." stringByAppendingString:item[@"key"]];
     UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil]; cell.textLabel.text = item[@"title"];
-    UISwitch *toggle = [UISwitch new]; toggle.on = [NSUserDefaults.standardUserDefaults boolForKey:key]; toggle.accessibilityIdentifier = item[@"key"]; [toggle addTarget:self action:@selector(itemChanged:) forControlEvents:UIControlEventValueChanged]; cell.accessoryView = toggle; cell.selectionStyle = UITableViewCellSelectionStyleNone; return cell;
+    UISwitch *toggle = [UISwitch new]; toggle.on = NGFeatureBool(key); toggle.accessibilityIdentifier = item[@"key"]; [toggle addTarget:self action:@selector(itemChanged:) forControlEvents:UIControlEventValueChanged]; cell.accessoryView = toggle; cell.selectionStyle = UITableViewCellSelectionStyleNone; return cell;
 }
 - (void)itemChanged:(UISwitch *)sender {
     NSString *key = [@"com.naiwaguo.playback.hidden." stringByAppendingString:sender.accessibilityIdentifier ?: @""];
@@ -1952,7 +1952,7 @@ static NSArray<NSArray<NSDictionary *> *> *NGPlaybackVisibilityItems(void) {
     UILabel *title = [UILabel new]; title.text = item[@"title"]; title.font = [UIFont preferredFontForTextStyle:UIFontTextStyleSubheadline];
     UILabel *value = [UILabel new]; value.textAlignment = NSTextAlignmentRight; value.font = [UIFont monospacedDigitSystemFontOfSize:12 weight:UIFontWeightRegular]; value.tag = 2;
     UISlider *slider = [UISlider new]; slider.minimumValue = minimum; slider.maximumValue = maximum; slider.accessibilityIdentifier = key; slider.tag = 1;
-    NSNumber *saved = [NSUserDefaults.standardUserDefaults objectForKey:key]; slider.value = saved ? saved.floatValue : [item[@"default"] floatValue];
+    NSNumber *saved = NGFeatureObject(key); slider.value = saved ? saved.floatValue : [item[@"default"] floatValue];
     [slider addTarget:self action:@selector(sliderChanged:) forControlEvents:UIControlEventValueChanged]; [cell.contentView addSubview:title]; [cell.contentView addSubview:value]; [cell.contentView addSubview:slider];
     title.translatesAutoresizingMaskIntoConstraints = NO; value.translatesAutoresizingMaskIntoConstraints = NO; slider.translatesAutoresizingMaskIntoConstraints = NO;
     UILayoutGuide *margins = cell.contentView.layoutMarginsGuide;
@@ -1982,7 +1982,7 @@ static NSArray<NSArray<NSDictionary *> *> *NGPlaybackVisibilityItems(void) {
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)path {
     UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
     UILabel *value = [UILabel new]; value.tag = 2; UISlider *slider = [UISlider new];
-    slider.minimumValue = 0; slider.maximumValue = 0.8; slider.value = [NSUserDefaults.standardUserDefaults objectForKey:NGPreferenceCommentGlassOpacity] ? [NSUserDefaults.standardUserDefaults floatForKey:NGPreferenceCommentGlassOpacity] : 0.32;
+    slider.minimumValue = 0; slider.maximumValue = 0.8; slider.value = NGFeatureObject(NGPreferenceCommentGlassOpacity) ? NGFeatureFloat(NGPreferenceCommentGlassOpacity) : 0.32;
     slider.accessibilityIdentifier = NGPreferenceCommentGlassOpacity; slider.tag = 1;
     [slider addTarget:self action:@selector(sliderChanged:) forControlEvents:UIControlEventValueChanged];
     [cell.contentView addSubview:value]; [cell.contentView addSubview:slider]; value.translatesAutoresizingMaskIntoConstraints = NO; slider.translatesAutoresizingMaskIntoConstraints = NO;
@@ -2025,9 +2025,8 @@ static NSArray<NSDictionary *> *NGSettingsGroups(void) {
             NGSettingRow(@"右侧动作图标",@"收藏、评论、点赞、分享；支持相册上传",@"paintbrush.pointed",nil,@"playbackIconPresets"),
             NGSettingRow(@"全局字号与自定义字体",@"比例调节、已安装字体和字体文件导入",@"textformat",nil,@"typography")
         ]},
-        @{@"title":@"备份与数据",@"subtitle":@"导出设置、恢复备份与使用统计",@"symbol":@"externaldrive",@"rows":@[
-            NGSettingRow(@"备份与恢复设置",@"保存到文件或从文件恢复",@"arrow.triangle.2.circlepath",nil,@"settingsBackup"),
-            NGSettingRow(@"使用统计与隐私",@"自动统计与数据说明",@"chart.bar",nil,@"usagePrivacy")
+        @{@"title":@"备份与恢复",@"subtitle":@"保存到文件或从文件恢复",@"symbol":@"externaldrive",@"action":@"settingsBackup",@"rows":@[
+            NGSettingRow(@"备份与恢复设置",@"查看配置、创建备份或恢复",@"arrow.triangle.2.circlepath",nil,@"settingsBackup")
         ]},
         @{@"title":@"工具与诊断",@"subtitle":@"页面结构、音频专项与问题采集",@"symbol":@"waveform.path.ecg",@"rows":@[
             NGSettingRow(@"调试工具",@"显示扳手入口；音频采集需开启后重启红果",@"wrench",NGPreferenceHUD,nil),
@@ -2035,6 +2034,29 @@ static NSArray<NSDictionary *> *NGSettingsGroups(void) {
             NGSettingRow(@"清除记录",@"",@"trash",nil,@"clearEvents")
         ]}
     ]; }); return groups;
+}
+
+static NSUInteger NGEnabledFeatureCount(void) {
+    if (NGBlocked) return 0;
+    NSDictionary *values=[NSUserDefaults.standardUserDefaults persistentDomainForName:NSBundle.mainBundle.bundleIdentifier] ?: @{};
+    NSUInteger count=0;
+    for (NSString *key in values) {
+        id value=values[key];
+        if (![key hasPrefix:@"com.naiwaguo.appearance."] && ![key hasPrefix:@"com.naiwaguo.playback."] && ![key hasPrefix:@"com.naiwaguo.debug."]) continue;
+        if ([value isKindOfClass:NSNumber.class] && CFGetTypeID((__bridge CFTypeRef)value)==CFBooleanGetTypeID() && [value boolValue]) count++;
+    }
+    count += [values[NGPreferenceHiddenDockItems] isKindOfClass:NSArray.class] ? [values[NGPreferenceHiddenDockItems] count] : 0;
+    if ([values[NGPreferenceFontName] length]) count++;
+    if (values[NGPreferenceFontScale] && fabs([values[NGPreferenceFontScale] doubleValue]-1)>.001) count++;
+    for (NSString *key in @[NGPreferencePlaybackPreset,NGPreferenceDockIconStyle]) if ([values[key] length] && ![values[key] isEqual:@"original"]) count++;
+    NSMutableSet *custom=[NSMutableSet set];
+    for (NSString *key in values) {
+        if (([key containsString:@".customImage."] || [key containsString:@".custom."] || [key containsString:@".dockIconImage."] || [key containsString:@".dockIcon."]) && [values[key] length]) {
+            NSArray *parts=[key componentsSeparatedByString:@"."];
+            [custom addObject:[[parts subarrayWithRange:NSMakeRange(0,parts.count-1)] componentsJoinedByString:@"."]];
+        }
+    }
+    return count+custom.count;
 }
 
 @interface NGBrandHeaderView : UIView
@@ -2048,7 +2070,7 @@ static NSArray<NSDictionary *> *NGSettingsGroups(void) {
     if ((self=[super initWithFrame:frame])) {
         _iconView=[[UIImageView alloc] initWithImage:NGHostIcon()]; _iconView.layer.cornerRadius=10; _iconView.clipsToBounds=YES; [self addSubview:_iconView];
         _titleLabel=[UILabel new]; _titleLabel.text=NGPluginName; _titleLabel.font=NGSettingsFont(20,UIFontWeightSemibold); _titleLabel.textColor=NGSettingsInk(); [self addSubview:_titleLabel];
-        _subtitleLabel=[UILabel new]; _subtitleLabel.text=@"外观与观看体验"; _subtitleLabel.font=NGSettingsFont(12,UIFontWeightRegular); _subtitleLabel.textColor=NGSettingsMuted(); [self addSubview:_subtitleLabel];
+        _subtitleLabel=[UILabel new]; _subtitleLabel.text=[NSString stringWithFormat:@"已开启 %lu 项功能",(unsigned long)NGEnabledFeatureCount()]; _subtitleLabel.font=NGSettingsFont(12,UIFontWeightRegular); _subtitleLabel.textColor=NGSettingsMuted(); [self addSubview:_subtitleLabel];
         _badgeLabel=[UILabel new]; _badgeLabel.text=[@"v" stringByAppendingString:NGVersion]; _badgeLabel.font=[UIFont monospacedSystemFontOfSize:11 weight:UIFontWeightRegular]; _badgeLabel.textColor=NGSettingsMuted(); _badgeLabel.textAlignment=NSTextAlignmentRight; [self addSubview:_badgeLabel];
     } return self;
 }
@@ -2094,7 +2116,6 @@ static NSArray<NSDictionary *> *NGSettingsGroups(void) {
 // Keep normal navigation and search results on the same destination map.
 static UIViewController *NGSettingsDestinationForAction(NSString *action) {
     if ([action isEqualToString:@"settingsBackup"]) return [NGSettingsBackupController new];
-    if ([action isEqualToString:@"usagePrivacy"]) return [NGUsageSettingsController new];
     if ([action isEqualToString:@"dockAppearance"]) return [NGDockAppearanceSettingsController new];
     if ([action isEqualToString:@"typography"]) return [NGTypographyController new];
     if ([action isEqualToString:@"sponsor"]) return [NGSupportViewController new];
@@ -2117,6 +2138,7 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
 @property(nonatomic, strong) NGBrandHeaderView *brandHeader;
 @property(nonatomic, strong) UIView *supportFooter;
 @property(nonatomic) BOOL sponsorPromptConsidered;
+@property(nonatomic) BOOL blockedPromptShown;
 - (void)showSponsorPromptIfNeeded;
 @end
 
@@ -2153,6 +2175,8 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
     self.groups = NGSettingsGroups();
+    self.brandHeader.subtitleLabel.text=[NSString stringWithFormat:@"已开启 %lu 项功能",(unsigned long)NGEnabledFeatureCount()];
+    NGUsageSend(YES);
     [self.tableView reloadData];
 }
 - (void)viewDidAppear:(BOOL)animated {
@@ -2164,18 +2188,26 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
     if (!NGSponsorTestPrompts) return;
 #endif
     if (!self.view.window || self.navigationController.topViewController!=self || self.presentedViewController || self.isBeingDismissed || self.navigationController.isBeingDismissed) return;
-    BOOL showNotice=![NSUserDefaults.standardUserDefaults boolForKey:NGUsageNoticeShown];
-#if NG_TEST
-    showNotice &= NGUsageTestNotices;
-#endif
-    if (showNotice) {
-        UIAlertController *notice=[UIAlertController alertControllerWithTitle:@"使用统计说明" message:@"奶蛙会自动向作者服务器发送红果 ID、红果版本、奶蛙版本、iOS 版本及随机安装编号，用于使用人数和版本统计。不读取登录凭据、观看内容或联系方式。详细说明在‘备份与数据 → 使用统计与隐私’。" preferredStyle:UIAlertControllerStyleAlert];
-        __weak typeof(self) weakSelf=self;
-        [notice addAction:[UIAlertAction actionWithTitle:@"我知道了" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action){[NSUserDefaults.standardUserDefaults setBool:YES forKey:NGUsageNoticeShown];dispatch_after(dispatch_time(DISPATCH_TIME_NOW,.4*NSEC_PER_SEC),dispatch_get_main_queue(),^{[weakSelf showSponsorPromptIfNeeded];});}]];
-        [self presentViewController:notice animated:YES completion:nil];return;
-    }
-    if (self.sponsorPromptConsidered || [NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceSponsorNever] || !self.view.window || self.navigationController.topViewController!=self || self.presentedViewController) return;
+    if (NGBlocked) { [self showBlockedPrompt];return; }
+    if (self.sponsorPromptConsidered || NGFeatureBool(NGPreferenceSponsorNever) || !self.view.window || self.navigationController.topViewController!=self || self.presentedViewController) return;
     self.sponsorPromptConsidered=YES; [self presentViewController:[NGSponsorPromptController new] animated:YES completion:nil];
+}
+- (void)showBlockedPrompt {
+    if (!NGBlocked || self.blockedPromptShown || !self.view.window || self.presentedViewController) return;
+    self.blockedPromptShown=YES;
+    UIAlertController *alert=[UIAlertController alertControllerWithTitle:@"已被拉黑" message:@"当前红果账号已被作者封禁，无法使用奶蛙。" preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"知道了" style:UIAlertActionStyleDefault handler:nil]];
+    [self presentViewController:alert animated:YES completion:nil];
+}
+- (void)applyFeatureAccess {
+    [super applyFeatureAccess];
+    self.brandHeader.subtitleLabel.text=[NSString stringWithFormat:@"已开启 %lu 项功能",(unsigned long)NGEnabledFeatureCount()];
+    self.navigationItem.searchController.searchBar.userInteractionEnabled=!NGBlocked;
+    self.navigationItem.searchController.searchBar.alpha=NGBlocked ? .42 : 1;
+    if (!NGBlocked) { self.blockedPromptShown=NO;return; }
+    self.pendingSearchMatch=nil;self.navigationItem.searchController.active=NO;
+    if (self.navigationController.topViewController!=self && [self.navigationController.viewControllers containsObject:self]) [self.navigationController popToViewController:self animated:NO];
+    if (self.presentedViewController) [self dismissViewControllerAnimated:NO completion:^{[self showBlockedPrompt];}];else [self showBlockedPrompt];
 }
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
@@ -2232,6 +2264,7 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
     }
 }
 - (void)supportFooterTapped:(UIButton *)button {
+    if (NGBlocked) return;
     if (self.navigationController.topViewController != self || self.navigationController.transitionCoordinator) return;
     NGSettingsFeedback();
     NSString *action = button.tag == 1 ? @"sponsor" : @"community";
@@ -2311,6 +2344,7 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
     return category;
 }
 - (void)openPendingSearchResult {
+    if (NGBlocked) return;
     NSDictionary *match = self.pendingSearchMatch;
     self.pendingSearchMatch = nil;
     if (!match || self.navigationController.topViewController != self) return;
@@ -2337,6 +2371,7 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
 }
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    if (NGBlocked) return;
     if (self.pendingSearchMatch || self.navigationController.topViewController != self) return;
     if ([self isSearching]) {
         if (indexPath.row < 0 || (NSUInteger)indexPath.row >= self.searchResults.count) return;
@@ -2347,6 +2382,8 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
         return;
     }
     if (indexPath.section < 0 || (NSUInteger)indexPath.section >= self.groups.count) return;
+    UIViewController *direct=NGSettingsDestinationForAction(self.groups[indexPath.section][@"action"]);
+    if(direct){[self.navigationController pushViewController:direct animated:YES];return;}
     NGSettingsGroupViewController *detail = [NGSettingsGroupViewController new];
     detail.groupIndex = indexPath.section;
     [self.navigationController pushViewController:detail animated:YES];
@@ -2405,7 +2442,7 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
     }
     if (key.length) {
         UISwitch *toggle = [UISwitch new];
-        toggle.on = [NSUserDefaults.standardUserDefaults boolForKey:key];
+        toggle.on = NGFeatureBool(key);
         toggle.accessibilityIdentifier = key;
         toggle.accessibilityLabel = row[@"title"];
         [toggle addTarget:self action:@selector(settingChanged:) forControlEvents:UIControlEventValueChanged];
@@ -2495,6 +2532,7 @@ static void NGInstallLifecycleHooks(void) {
             }
             NGInstallOverlay();
             NGInstallNativeSettings();
+            NGInstallSettingsGesture();
             
             NGUpdateDock();
             NGInstallPlaybackHeaderGlassHook();
@@ -2514,6 +2552,7 @@ static void NGInstallLifecycleHooks(void) {
         [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidBecomeActiveNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
             NGLog(@"lifecycle", @"foreground", nil);
             NGUsageForeground();
+            NGInstallSettingsGesture();
             [NGPerformanceRecorder.shared resume];
             NGInstallOverlay();
             
@@ -2544,7 +2583,7 @@ static BOOL NGIsHostApp(void) {
 }
 
 static void NGRestoreLegacyTopChannels(NSUserDefaults *defaults) {
-    if ([defaults boolForKey:NGPreferenceChannelRestoreMigration]) return;
+    if (NGFeatureBool(NGPreferenceChannelRestoreMigration)) return;
     for (NSString *key in @[@"com.naiwaguo.playback.hidden.header.follow", @"com.naiwaguo.playback.hidden.header.manju", @"com.naiwaguo.playback.hidden.header.live", @"com.naiwaguo.playback.hidden.header.recommended"])
         [defaults removeObjectForKey:key];
     [defaults setBool:YES forKey:NGPreferenceChannelRestoreMigration];
@@ -2577,6 +2616,7 @@ static void NGStart(void) {
         NGPreferencePlaybackPreset: @"original"
     }];
     NGRestoreLegacyTopChannels(defaults);
+    NGUsageSyncAccess();
     NGPrepareRuntimeGlass();
     NGLoadTypographyFont(); NGInstallTypographyHooks(); NGRefreshTypography();
     NGInstallLifecycleHooks();
@@ -2592,13 +2632,13 @@ static void NGStart(void) {
     NGUpdatePlaybackTextLayout();
     NGLog(@"lifecycle", @"plugin-loaded", @{@"version": NGVersion, @"bundle": NSBundle.mainBundle.bundleIdentifier ?: @"unknown"});
 #ifdef NG_TEST
-    if ([defaults boolForKey:NGPreferencePerformance]) NGSetPerformanceEnabled(YES);
+    if (NGFeatureBool(NGPreferencePerformance)) NGSetPerformanceEnabled(YES);
 #else
     [defaults setBool:NO forKey:NGPreferencePerformance];
 #endif
     NGDAudioHooksInstall(); NGDDebugInspectorInstall(); NGDRegisterFLEXKingProvider();
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.7 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        NGInstallOverlay(); NGUsageForeground();
+        NGInstallOverlay(); NGUsageStart();NGInstallSettingsGesture();
         
         NGInstallPlaybackGlassHook();
         NGUpdatePlaybackGlass();

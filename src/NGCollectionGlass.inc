@@ -18,7 +18,7 @@ static UIView *NGCollectionCarrier(UIView *row) {
     for (UIView *child in parent.subviews) if (child != row && ![child.accessibilityIdentifier hasPrefix:@"NaiwaGuo."]) return row;
     return parent;
 }
-static BOOL NGCollectionGlassEnabled(void) { return [NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceCollectionGlass]; }
+static BOOL NGCollectionGlassEnabled(void) { return NGFeatureBool(NGPreferenceCollectionGlass); }
 static void NGCollectionSetHidden(UIView *view, BOOL hidden) {
     NGCollectionHiddenState *state = objc_getAssociatedObject(view, &NGCollectionHiddenKey);
     if (hidden) {

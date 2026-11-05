@@ -21,7 +21,7 @@
     CGFloat capsule=NGDockCapsuleWidth(NGDockFallbackMetrics,self.viewControllers.count,4,width,NGDockSize(NGPreferenceDockLength))*scale;
     CGFloat height=NGDockFallbackMetrics.height*scale,diameter=NGDockFallbackMetrics.height*searchScale,left=(width-capsule-12-diameter)/2,bottom=NGDockFallbackMetrics.height;
     self.legacyPlatter.frame=CGRectMake(left,bottom-height,capsule,height); self.legacyPlatter.layer.cornerRadius=height/2;
-    UIUserInterfaceStyle style=self.traitCollection.userInterfaceStyle; BOOL clear=[NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceDockClear];
+    UIUserInterfaceStyle style=self.traitCollection.userInterfaceStyle; BOOL clear=NGFeatureBool(NGPreferenceDockClear);
     if (self.glassStyle!=style || self.clearApplied!=clear) {
         self.glassStyle=style; self.clearApplied=clear;
         UIBlurEffect *effect=[UIBlurEffect effectWithStyle:clear ? UIBlurEffectStyleSystemUltraThinMaterial : UIBlurEffectStyleSystemThinMaterial];

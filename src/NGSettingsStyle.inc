@@ -59,6 +59,8 @@ static BOOL NGSettingsMotionEnabled(void) {
 
 @interface NGSettingsTableController : UITableViewController
 @property(nonatomic) BOOL entranceRunning;
+@property(nonatomic,strong) id accessObserver;
+- (void)applyFeatureAccess;
 @end
 @implementation NGSettingsTableController
 - (void)viewDidLoad {
@@ -71,9 +73,14 @@ static BOOL NGSettingsMotionEnabled(void) {
     self.tableView.sectionHeaderHeight = 28; self.tableView.sectionFooterHeight = UITableViewAutomaticDimension;
     self.tableView.estimatedSectionFooterHeight = 24;
     self.tableView.contentInset = UIEdgeInsetsMake(4,0,28,0);
+    __weak typeof(self) weakSelf=self;
+    self.accessObserver=[NSNotificationCenter.defaultCenter addObserverForName:NGAccessChanged object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note){[weakSelf applyFeatureAccess];}];
 }
+- (void)dealloc { if(self.accessObserver)[NSNotificationCenter.defaultCenter removeObserver:self.accessObserver]; }
+- (void)applyFeatureAccess { self.tableView.userInteractionEnabled=!NGBlocked;self.tableView.alpha=NGBlocked ? .42 : 1; }
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
+    [self applyFeatureAccess];
     UINavigationBarAppearance *appearance = [UINavigationBarAppearance new];
     [appearance configureWithTransparentBackground];
     appearance.backgroundEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemThinMaterial];
@@ -101,7 +108,7 @@ static BOOL NGSettingsMotionEnabled(void) {
 - (void)viewIsAppearing:(BOOL)animated {
     [super viewIsAppearing:animated];
     id<UIViewControllerTransitionCoordinator> transition = self.transitionCoordinator;
-    if (!animated || !transition || transition.initiallyInteractive || self.entranceRunning || !NGSettingsMotionEnabled()) return;
+    if (NGBlocked || !animated || !transition || transition.initiallyInteractive || self.entranceRunning || !NGSettingsMotionEnabled()) return;
     self.entranceRunning = YES; [self.tableView layoutIfNeeded];
     NSArray<UITableViewCell *> *cells = self.tableView.visibleCells;
     UIView *header = self.tableView.tableHeaderView;

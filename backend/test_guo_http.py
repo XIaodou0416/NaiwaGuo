@@ -17,7 +17,7 @@ class GuoHTTP(unittest.TestCase):
         support.API.setUp(self)
         self.login()
         with sqlite3.connect(support.s.DATA / 'guo.sqlite3') as connection:
-            for table in ('guo_activity', 'guo_identities', 'guo_installations'):
+            for table in ('guo_activity', 'guo_identities', 'guo_installations', 'guo_bans', 'guo_ban_audit'):
                 connection.execute('DELETE FROM ' + table)
 
     req = support.API.req if support else None
@@ -38,6 +38,18 @@ class GuoHTTP(unittest.TestCase):
     def test_oversize_and_missing_schema(self):
         self.assertEqual(self.req('/api/guo/v1/usage', {'text': 'x' * 5000}, auth=False)[0], 413)
         self.assertEqual(self.req('/api/guo/v1/usage', {}, auth=False)[0], 400)
+
+    def test_ban_and_unban_over_http(self):
+        body = {'installation': '00000000-0000-4000-8000-000000000011', 'secret': 'z' * 72, 'hongguo_id': '123456', 'plugin_version': '0.1.1', 'host_version': '7.4.3', 'system_version': '15.8', 'schema_version': 1}
+        ban = {'hongguo_id': '123456', 'blocked': True}
+        self.assertEqual(self.req('/api/admin/guo/ban', ban, auth=False)[0], 401)
+        self.assertEqual(self.req('/api/admin/guo/ban', ban, origin=False)[0], 403)
+        self.assertEqual(self.req('/api/admin/guo/ban', ban)[0], 200)
+        self.assertTrue(self.req('/api/guo/v1/usage', body, auth=False)[1]['blocked'])
+        self.assertTrue(self.req('/api/admin/guo/users')[1]['items'][0]['blocked'])
+        self.assertEqual(self.req('/api/admin/guo/bans')[1]['items'][0]['hongguo_id'], '123456')
+        self.assertEqual(self.req('/api/admin/guo/ban', {**ban, 'blocked': False})[0], 200)
+        self.assertFalse(self.req('/api/guo/v1/usage', body, auth=False)[1]['blocked'])
 
 
 if __name__ == '__main__': unittest.main()

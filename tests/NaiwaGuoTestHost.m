@@ -904,6 +904,7 @@ static NSDictionary *NGTestPlaybackHeaderGlass(void) {
 #include "NGRegression007Tests.inc"
 #include "NGRegression009Tests.inc"
 #include "NGRegression010Tests.inc"
+#include "NGRegression011Tests.inc"
 
 static void NGWriteTestResult(NSDictionary *result) {
     NSString *documents = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
@@ -932,6 +933,9 @@ static void NGWriteTestResult(NSDictionary *result) {
     [self.window makeKeyAndVisible];
 
     NSArray *arguments = NSProcessInfo.processInfo.arguments;
+    if ([arguments containsObject:@"--block-live011"]) { NGRunBlockLive011(self.window);return; }
+    if ([arguments containsObject:@"--gesture011"]) { NGRunGestureUI011(self.window);return; }
+    if ([arguments containsObject:@"--blocked-seed011"] || [arguments containsObject:@"--blocked-restart011"]) {NGRunBlockedUI011(self.window,[arguments containsObject:@"--blocked-restart011"]);return;}
     if ([arguments containsObject:@"--usage-live010"]) { NGRunUsageLive010();return; }
     NGDockForceLegacyTest=[arguments containsObject:@"--legacy-dock006"];
     for (NSString *mode in @[@"settings-preview009",@"native-entry009",@"sponsor-never-seed009",@"sponsor-never-check009",@"unrestricted-restart009"]) if ([arguments containsObject:[@"--" stringByAppendingString:mode]]) { NGRunSettingsUI009(self.window,mode);return; }
@@ -1064,12 +1068,11 @@ static void NGWriteTestResult(NSDictionary *result) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW,8.4*NSEC_PER_SEC),dispatch_get_main_queue(),^{ [home tableView:home.tableView didUnhighlightRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:2]]; });
         return;
     }
-    if ([arguments containsObject:@"--preview-backup"] || [arguments containsObject:@"--preview-privacy"] || [arguments containsObject:@"--preview-fonts"] || [arguments containsObject:@"--preview-share"] || [arguments containsObject:@"--preview-link-failure"] || [arguments containsObject:@"--preview-support"] || [arguments containsObject:@"--preview-community"] || [arguments containsObject:@"--preview-settings"] || [arguments containsObject:@"--preview-icons"] || [arguments containsObject:@"--preview-colors"] || [arguments containsObject:@"--preview-dock-icons"] || [arguments containsObject:@"--preview-layout"]) {
+    if ([arguments containsObject:@"--preview-backup"] || [arguments containsObject:@"--preview-fonts"] || [arguments containsObject:@"--preview-share"] || [arguments containsObject:@"--preview-link-failure"] || [arguments containsObject:@"--preview-support"] || [arguments containsObject:@"--preview-community"] || [arguments containsObject:@"--preview-settings"] || [arguments containsObject:@"--preview-icons"] || [arguments containsObject:@"--preview-colors"] || [arguments containsObject:@"--preview-dock-icons"] || [arguments containsObject:@"--preview-layout"]) {
         [NSUserDefaults.standardUserDefaults setBool:NO forKey:NGPreferenceHUD]; NGStart();
         UIViewController *settings = [arguments containsObject:@"--preview-icons"] ? [NGPlaybackPresetSettingsController new] : ([arguments containsObject:@"--preview-colors"] ? [NGDockColorSettingsController new] : ([arguments containsObject:@"--preview-dock-icons"] ? [NGDockIconSettingsController new] : ([arguments containsObject:@"--preview-layout"] ? [NGPlaybackLayoutSettingsController new] : [NGSettingsViewController new])));
         if ([arguments containsObject:@"--preview-fonts"]) settings = [NGTypographyController new];
         if ([arguments containsObject:@"--preview-backup"]) settings = [NGSettingsBackupController new];
-        if ([arguments containsObject:@"--preview-privacy"]) settings = [NGUsageSettingsController new];
         if ([arguments containsObject:@"--dock-settings"]) settings=[NGDockAppearanceSettingsController new];
         if ([arguments containsObject:@"--font-demo"]) { [NSUserDefaults.standardUserDefaults setDouble:0.8 forKey:NGPreferenceFontScale]; [NSUserDefaults.standardUserDefaults setObject:@"Georgia" forKey:NGPreferenceFontName]; NGRefreshTypography(); }
 
@@ -1226,6 +1229,7 @@ static void NGWriteTestResult(NSDictionary *result) {
             @"danmaku007": NGTestDanmaku007(),
             @"settings009": NGTestSettings009(),
             @"settingsData010": NGTestSettingsData010(),
+            @"accountBlocks011": NGTestAccountBlocks011(),
             @"sponsorPrompt007": NGTestSponsorPrompt007(),
             @"dockHaptics005": NGTestDockHaptics005(),
             @"episodeToolbar": NGTestEpisodeToolbar(),
@@ -1271,7 +1275,7 @@ static void NGWriteTestResult(NSDictionary *result) {
 
 int main(int argc, char *argv[]) {
     @autoreleasepool {
-        BOOL retained=[NSProcessInfo.processInfo.arguments containsObject:@"--retained-defaults005"] || [NSProcessInfo.processInfo.arguments containsObject:@"--sponsor-never-check009"] || [NSProcessInfo.processInfo.arguments containsObject:@"--unrestricted-restart009"];
+        BOOL retained=[NSProcessInfo.processInfo.arguments containsObject:@"--retained-defaults005"] || [NSProcessInfo.processInfo.arguments containsObject:@"--sponsor-never-check009"] || [NSProcessInfo.processInfo.arguments containsObject:@"--unrestricted-restart009"] || [NSProcessInfo.processInfo.arguments containsObject:@"--blocked-restart011"];
         if (!retained) [NSUserDefaults.standardUserDefaults removePersistentDomainForName:NSBundle.mainBundle.bundleIdentifier];
         NGTestFrameworkOriginalInfo = [[NSBundle bundleForClass:UIView.class].infoDictionary copy];
         [NSUserDefaults.standardUserDefaults setObject:@"original" forKey:NGPreferencePlaybackPreset];

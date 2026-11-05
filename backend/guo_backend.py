@@ -1,4 +1,4 @@
-"""Optional 奶蛙 usage statistics for the existing Naiwa admin service."""
+"""奶蛙 statistics and account blocks for the existing Naiwa admin service."""
 import datetime
 import hashlib
 import hmac
@@ -10,7 +10,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 
-def install(handler, data_directory, limited):
+def install(handler, data_directory, limited, origin='https://naiwa.xxdou.icu'):
     database = Path(data_directory) / 'guo.sqlite3'
 
     def connect():
@@ -34,27 +34,34 @@ CREATE TABLE IF NOT EXISTS guo_activity(
  hongguo_id TEXT NOT NULL, PRIMARY KEY(day,installation,hongguo_id));
 CREATE INDEX IF NOT EXISTS guo_seen ON guo_installations(last_seen);
 CREATE INDEX IF NOT EXISTS guo_day ON guo_activity(day);
+CREATE TABLE IF NOT EXISTS guo_bans(hongguo_id TEXT PRIMARY KEY,note TEXT NOT NULL,created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS guo_ban_audit(id INTEGER PRIMARY KEY,at INTEGER NOT NULL,hongguo_id TEXT NOT NULL,blocked INTEGER NOT NULL);
 ''')
 
     original_get, original_post = handler.get, handler.post
 
     def get(self):
         path = urlsplit(self.path).path
-        if path not in ('/api/admin/guo/stats', '/api/admin/guo/users'):
+        if path not in ('/api/admin/guo/stats', '/api/admin/guo/users', '/api/admin/guo/bans'):
             return original_get(self)
         if not self.session():
             return self.fail(401, '请先登录')
         now = int(time.time())
         today = datetime.datetime.fromtimestamp(now, datetime.timezone(datetime.timedelta(hours=8))).date()
         with connect() as connection:
+            if path.endswith('/bans'):
+                return self.reply({'items': [dict(row) for row in connection.execute('SELECT * FROM guo_bans ORDER BY created_at DESC LIMIT 1000')]})
             if path.endswith('/users'):
                 query = parse_qs(urlsplit(self.path).query)
                 search = query.get('q', [''])[0].strip()[:64]
-                offset = max(0, min(100000, int(query.get('offset', ['0'])[0])))
+                try:
+                    offset = max(0, min(100000, int(query.get('offset', ['0'])[0])))
+                except ValueError:
+                    return self.fail(400, '分页无效')
                 where = ' WHERE hongguo_id LIKE ?'
                 args = ('%' + search + '%',)
                 total = connection.execute('SELECT count(*) FROM guo_installations' + where, args).fetchone()[0]
-                rows = connection.execute('SELECT installation,hongguo_id,plugin_version,host_version,system_version,first_seen,last_seen FROM guo_installations' + where + ' ORDER BY last_seen DESC LIMIT 100 OFFSET ?', args + (offset,))
+                rows = connection.execute('SELECT installation,hongguo_id,plugin_version,host_version,system_version,first_seen,last_seen,EXISTS(SELECT 1 FROM guo_bans b WHERE b.hongguo_id=guo_installations.hongguo_id) AS blocked FROM guo_installations' + where + ' ORDER BY last_seen DESC LIMIT 100 OFFSET ?', args + (offset,))
                 return self.reply({'items': [dict(row) for row in rows], 'total': total, 'offset': offset})
 
             def scalar(sql, args=()):
@@ -66,10 +73,31 @@ CREATE INDEX IF NOT EXISTS guo_day ON guo_activity(day);
                 day = str(today - datetime.timedelta(days=age))
                 result['days'].append({'day': day, 'users': scalar('SELECT count(DISTINCT hongguo_id) FROM guo_activity WHERE day=? AND hongguo_id<>\'\'', (day,)), 'installations': scalar('SELECT count(DISTINCT installation) FROM guo_activity WHERE day=?', (day,))})
             result['versions'] = {column: [dict(row) for row in connection.execute(f'SELECT {column} AS version,count(*) AS count FROM guo_installations WHERE last_seen>=? GROUP BY {column} ORDER BY count DESC LIMIT 100', (now - 30 * 86400,))] for column in ('plugin_version', 'host_version', 'system_version')}
+            result['blockedUsers'] = scalar('SELECT count(*) FROM guo_bans')
             return self.reply(result)
 
     def post(self):
         path = urlsplit(self.path).path
+        if path == '/api/admin/guo/ban':
+            session = self.session()
+            if not session:
+                return self.fail(401, '请先登录')
+            if self.headers.get('Origin') != origin or not hmac.compare_digest(self.headers.get('X-CSRF-Token', ''), session['csrf']):
+                return self.fail(403, '请刷新页面后重试')
+            if not 0 < int(self.headers.get('Content-Length', '0')) <= 4096:
+                return self.fail(413, '请求过大或为空')
+            body = self.body()
+            uid, blocked, note = body.get('hongguo_id'), body.get('blocked'), body.get('note', '')
+            if not isinstance(uid, str) or not re.fullmatch(r'[0-9]{1,20}', uid) or not isinstance(blocked, bool) or not isinstance(note, str) or len(note) > 200:
+                return self.fail(400, '封禁字段无效')
+            with connect() as connection:
+                if blocked:
+                    connection.execute('INSERT INTO guo_bans VALUES(?,?,?) ON CONFLICT(hongguo_id) DO UPDATE SET note=excluded.note,created_at=excluded.created_at', (uid, note.strip(), int(time.time())))
+                else:
+                    connection.execute('DELETE FROM guo_bans WHERE hongguo_id=?', (uid,))
+                connection.execute('INSERT INTO guo_ban_audit(at,hongguo_id,blocked) VALUES(?,?,?)', (int(time.time()), uid, int(blocked)))
+                connection.execute('DELETE FROM guo_ban_audit WHERE id < (SELECT COALESCE(MAX(id),0)-10000 FROM guo_ban_audit)')
+            return self.reply({'ok': True, 'hongguo_id': uid, 'blocked': blocked})
         if path not in ('/api/guo/v1/usage', '/api/guo/v1/forget'):
             return original_post(self)
         if limited('guo:' + self.client_ip(), 60, 60):
@@ -102,7 +130,8 @@ CREATE INDEX IF NOT EXISTS guo_day ON guo_activity(day);
             connection.execute('INSERT OR IGNORE INTO guo_activity VALUES(?,?,?)', (str(today), installation, uid))
             connection.execute('DELETE FROM guo_activity WHERE day<?', (str(today - datetime.timedelta(days=90)),))
             connection.execute('DELETE FROM guo_installations WHERE last_seen<?', (now - 180 * 86400,))
-        return self.reply({'ok': True})
+            blocked = bool(uid and connection.execute('SELECT 1 FROM guo_bans WHERE hongguo_id=?', (uid,)).fetchone())
+        return self.reply({'ok': True, 'hongguo_id': uid, 'blocked': blocked})
 
     handler.get, handler.post = get, post
     return database

@@ -20,19 +20,19 @@ static NSDictionary *NGTestSettingsData010(void) {
     [defaults setObject:@[@"shop"] forKey:NGPreferenceHiddenDockItems];
     [defaults setObject:@"host-private" forKey:@"host.accountToken"];
     [defaults setObject:@"fixture-installation" forKey:NGUsageInstallation];[defaults setObject:@"fixture-secret" forKey:NGUsageSecret];
-    [defaults setBool:YES forKey:NGUsageNoticeShown];
+    [defaults setObject:@[@"987654321"] forKey:NGUsageBans];
     UIGraphicsImageRenderer *renderer=[[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(12,12)];
     NSData *icon=UIImagePNGRepresentation([renderer imageWithActions:^(UIGraphicsImageRendererContext *context){[UIColor.blackColor setFill];UIRectFill(CGRectMake(0,0,12,12));}]);
     [defaults setObject:icon forKey:NGDockIconImageKey(0)];
     NSError *error=nil;NSData *data=NGCreateSettingsBackup(&error);NSDictionary *archive=NGReadSettingsBackup(data,&error);
     NSDictionary *preferences=archive[@"preferences"];
     BOOL roundtrip=archive && [preferences[NGPreferenceDock] boolValue] && [preferences[NGDockIconImageKey(0)] isEqual:icon];
-    BOOL private=preferences[NGUsageInstallation]==nil && preferences[NGUsageSecret]==nil && preferences[NGUsageNoticeShown]==nil && preferences[@"host.accountToken"]==nil;
+    BOOL private=preferences[NGUsageInstallation]==nil && preferences[NGUsageSecret]==nil && preferences[NGUsageBans]==nil && preferences[@"host.accountToken"]==nil;
     [defaults setBool:NO forKey:NGPreferenceDock];[defaults setDouble:1 forKey:NGPreferenceFontScale];[defaults setBool:YES forKey:NGPreferenceCommentGlass];
     BOOL restored=NGRestoreSettingsBackup(archive,&error) && [defaults boolForKey:NGPreferenceDock] && fabs([defaults doubleForKey:NGPreferenceFontScale]-.7)<.001 && ![defaults boolForKey:NGPreferenceCommentGlass] && [[defaults dataForKey:NGDockIconImageKey(0)] isEqual:icon];
-    BOOL host=[[defaults stringForKey:@"host.accountToken"] isEqual:@"host-private"] && [[defaults stringForKey:NGUsageSecret] isEqual:@"fixture-secret"] && [defaults boolForKey:NGUsageNoticeShown];
+    BOOL host=[[defaults stringForKey:@"host.accountToken"] isEqual:@"host-private"] && [[defaults stringForKey:NGUsageSecret] isEqual:@"fixture-secret"] && [[defaults arrayForKey:NGUsageBans] containsObject:@"987654321"];
     BOOL rejected=YES;
-    for(NSDictionary *invalid in @[@{@"host.accountToken":@"replace"},@{NGUsageNoticeShown:@YES},@{NGPreferenceDock:@[]},@{NGPreferenceDockSelectedColor:@[@0,@0,@0,@"bad"]},@{NGPreferenceFontFile:@"../invalid.ttf"}]) {
+    for(NSDictionary *invalid in @[@{@"host.accountToken":@"replace"},@{NGUsageBans:@YES},@{NGPreferenceDock:@[]},@{NGPreferenceDockSelectedColor:@[@0,@0,@0,@"bad"]},@{NGPreferenceFontFile:@"../invalid.ttf"}]) {
         NSMutableDictionary *bad=[archive mutableCopy];bad[@"preferences"]=invalid;
         NSData *badData=[NSPropertyListSerialization dataWithPropertyList:bad format:NSPropertyListBinaryFormat_v1_0 options:0 error:nil];
         rejected &= NGReadSettingsBackup(badData,nil)==nil;
@@ -41,18 +41,16 @@ static NSDictionary *NGTestSettingsData010(void) {
     BOOL unchanged=[[defaults stringForKey:@"host.accountToken"] isEqual:@"host-private"] && [defaults boolForKey:NGPreferenceDock];
     NGMockLogged010=YES;NGMockUID010=@"123456789";
     BOOL identity=[NGHongguoUserID() isEqual:@"123456789"];NGMockLogged010=NO;identity &= !NGHongguoUserID().length;NGMockLogged010=YES;NGMockUID010=@"invalid";identity &= !NGHongguoUserID().length;NGMockLogged010=NO;
-    NGUsageSettingsController *usage=[NGUsageSettingsController new];[usage loadViewIfNeeded];BOOL automatic=YES;
-    for(NSUInteger i=0;i<2;i++){UITableViewCell *cell=[usage tableView:usage.tableView cellForRowAtIndexPath:[NSIndexPath indexPathForRow:i inSection:0]];automatic &= ![cell.accessoryView isKindOfClass:UISwitch.class];}
-    automatic &= [[usage tableView:usage.tableView titleForFooterInSection:0] containsString:@"自动"];
+    BOOL automatic=NSClassFromString(@"NGUsageSettingsController")==nil;
     [defaults removeObjectForKey:NGUsageInstallation];[defaults removeObjectForKey:NGUsageSecret];
     NSDictionary *payload=NGUsagePayload(defaults,@"123456789");BOOL payloadFields=payload.count==7 && [payload[@"schema_version"] isEqual:@1] && [payload[@"plugin_version"] isEqual:NGVersion] && [payload[@"hongguo_id"] isEqual:@"123456789"] && [payload[@"secret"] length]>=64;
     BOOL diagnostics=NGPreferenceSnapshot()[NGUsageSecret]==nil && NGPreferenceSnapshot()[NGUsageInstallation]==nil;
     NSArray *first=NGSettingsGroups();BOOL cached=YES;for(NSUInteger i=0;i<1000;i++)cached &= NGSettingsGroups()==first;
     UIColor *light=[NGSettingsAccent() resolvedColorWithTraitCollection:[UITraitCollection traitCollectionWithUserInterfaceStyle:UIUserInterfaceStyleLight]],*dark=[NGSettingsAccent() resolvedColorWithTraitCollection:[UITraitCollection traitCollectionWithUserInterfaceStyle:UIUserInterfaceStyleDark]];
     CGFloat lr=0,lg=0,lb=0,dr=0,dg=0,db=0;[light getRed:&lr green:&lg blue:&lb alpha:nil];[dark getRed:&dr green:&dg blue:&db alpha:nil];BOOL monochrome=fabs(lr-lg)<.01 && fabs(lg-lb)<.01 && lr<.2 && fabs(dr-dg)<.01 && fabs(dg-db)<.01 && dr>.8;
-    BOOL routes=[NGSettingsDestinationForAction(@"settingsBackup") isKindOfClass:NGSettingsBackupController.class] && [NGSettingsDestinationForAction(@"usagePrivacy") isKindOfClass:NGUsageSettingsController.class];
+    BOOL routes=[NGSettingsDestinationForAction(@"settingsBackup") isKindOfClass:NGSettingsBackupController.class] && NGSettingsDestinationForAction(@"usagePrivacy")==nil;
     [defaults setPersistentDomain:saved forName:bundle];
-    return @{@"backupRoundTripIncludingCustomImages":@(roundtrip),@"backupExcludesAccountsNoticeAndInstallationSecrets":@(private),@"restoreReplacesOnlyPluginSettings":@(restored),@"restorePreservesHostAndStatisticsNotice":@(host),@"invalidBackupsRejectedBeforeMutation":@(rejected && unchanged),@"accountAdapterHandlesLoginLogoutAndInvalidID":@(identity),@"automaticStatisticsHasNoUserSwitch":@(automatic),@"usagePayloadHasOnlyDeclaredFields":@(payloadFields),@"diagnosticsExcludeServiceSecrets":@(diagnostics),@"classificationCachedAcrossRepeatedReads":@(cached),@"accentIsBlackAndWhite":@(monochrome),@"backupAndPrivacyDestinationsExist":@(routes)};
+    return @{@"backupRoundTripIncludingCustomImages":@(roundtrip),@"backupExcludesAccountsBlocksAndInstallationSecrets":@(private),@"restoreReplacesOnlyPluginSettings":@(restored),@"restorePreservesHostAndAccountBlocks":@(host),@"invalidBackupsRejectedBeforeMutation":@(rejected && unchanged),@"accountAdapterHandlesLoginLogoutAndInvalidID":@(identity),@"statisticsPageRemoved":@(automatic),@"usagePayloadHasOnlyDeclaredFields":@(payloadFields),@"diagnosticsExcludeServiceSecrets":@(diagnostics),@"classificationCachedAcrossRepeatedReads":@(cached),@"accentIsBlackAndWhite":@(monochrome),@"backupRouteExistsAndPrivacyRouteRemoved":@(routes)};
 }
 
 static void NGRunUsageLive010(void) {

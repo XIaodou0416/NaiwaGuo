@@ -15,6 +15,17 @@
   const metrics = document.createElement('div');
   metrics.className = 'metrics';
   const versions = document.createElement('div');
+  const banHeading = document.createElement('h3'); banHeading.textContent = '红果 ID 封禁';
+  const banID = document.createElement('input'); banID.placeholder = '红果 ID'; banID.setAttribute('aria-label', '要封禁的红果 ID'); banID.maxLength = 20; banID.inputMode = 'numeric';
+  const banNote = document.createElement('input'); banNote.placeholder = '备注（可选）'; banNote.setAttribute('aria-label', '封禁备注'); banNote.maxLength = 200;
+  const banRows = document.createElement('div');
+  async function changeBan(uid, blocked, note = '') {
+    if (!/^[0-9]{1,20}$/.test(uid)) throw Error('请输入有效的红果 ID');
+    if (!confirm(`${blocked ? '封禁' : '解除封禁'}红果 ID ${uid}？`)) return;
+    await api('admin/guo/ban', { hongguo_id: uid, blocked, note });
+    await refresh();
+  }
+  const banButton = button('封禁用户', async () => { await changeBan(banID.value.trim(), true, banNote.value.trim()); });
   const search = document.createElement('input');
   search.placeholder = '搜索红果 ID';
   search.setAttribute('aria-label', '搜索红果 ID');
@@ -23,7 +34,7 @@
   summary.setAttribute('role', 'status');
   const table = document.createElement('table');
   const head = table.createTHead().insertRow();
-  for (const label of ['红果 ID', '红果版本', '奶蛙版本', 'iOS 版本', '首次使用', '最近使用']) {
+  for (const label of ['红果 ID', '红果版本', '奶蛙版本', 'iOS 版本', '首次使用', '最近使用', '状态 / 操作']) {
     const th = document.createElement('th'); th.textContent = label; head.append(th);
   }
   const rows = table.createTBody();
@@ -37,10 +48,18 @@
   const next = button('下一页', async () => { offset += 100; await refresh(); });
   const refreshButton = button('查询 / 刷新', async () => { offset = 0; await refresh(); });
   search.onkeydown = event => { if (event.key === 'Enter') refreshButton.click(); };
-  section.append(heading, note, metrics, versions, days, search, refreshButton, summary, scroll, previous, next);
+  section.append(heading, note, banHeading, banID, banNote, banButton, banRows, metrics, versions, days, search, refreshButton, summary, scroll, previous, next);
   document.querySelector('#app').append(section);
   async function refresh() {
-    const [stats, data] = await Promise.all([api('admin/guo/stats'), api('admin/guo/users?q=' + encodeURIComponent(search.value.trim()) + '&offset=' + offset)]);
+    const [stats, data, bans] = await Promise.all([api('admin/guo/stats'), api('admin/guo/users?q=' + encodeURIComponent(search.value.trim()) + '&offset=' + offset), api('admin/guo/bans')]);
+    banRows.replaceChildren();
+    const banCount = document.createElement('p'); banCount.textContent = `已封禁 ${stats.blockedUsers} 个红果 ID`; banRows.append(banCount);
+    for (const item of bans.items) {
+      const row = document.createElement('p');
+      const label = document.createElement('span'); label.textContent = item.hongguo_id + (item.note ? ' · ' + item.note : '') + ' ';
+      label.style.overflowWrap = 'anywhere';
+      row.append(label, button('解除封禁', () => changeBan(item.hongguo_id, false))); banRows.append(row);
+    }
     metrics.replaceChildren();
     for (const [key, title] of Object.entries({ users: '去重红果人数', installations: '安装数', activeToday: '今日活跃人数', active7d: '近 7 天活跃人数', onlineInstallations: '近 10 分钟上报安装' })) {
       const card = document.createElement('div'); card.className = 'metric';
@@ -58,6 +77,9 @@
     for (const user of data.items) {
       const row = rows.insertRow();
       for (const value of [user.hongguo_id || '未登录 / 未读取', user.host_version, user.plugin_version, user.system_version, new Date(user.first_seen * 1000).toLocaleString(), new Date(user.last_seen * 1000).toLocaleString()]) row.insertCell().textContent = value;
+      const action = row.insertCell();
+      if (user.hongguo_id) action.append(button(user.blocked ? '解除封禁' : '封禁', () => changeBan(user.hongguo_id, !user.blocked)));
+      else action.textContent = '无可用 ID';
     }
     summary.textContent = `共 ${data.total} 个安装；${data.items.length ? offset + 1 : 0}–${offset + data.items.length}，更新于 ${new Date(stats.at * 1000).toLocaleString()}`;
     previous.disabled = offset === 0; next.disabled = offset + 100 >= data.total;

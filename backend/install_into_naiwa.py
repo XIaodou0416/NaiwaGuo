@@ -44,7 +44,7 @@ def main():
         print('Integration plan valid; no files changed')
         return
     if args.backup_root:
-        backup = args.backup_root / ('guo-0.1.0-' + datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ'))
+        backup = args.backup_root / ('guo-0.1.1-' + datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ'))
         backup.mkdir(parents=True, mode=0o700)
         shutil.copy2(root / 'server.py', backup / 'server.py')
         shutil.copy2(root / 'web/index.html', backup / 'index.html')

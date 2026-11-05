@@ -5,14 +5,13 @@ DEVICE=$(cat build/simulator-device.txt)
 OUT=docs/previews
 mkdir -p "$OUT"
 CONTAINER=$(xcrun simctl get_app_container "$DEVICE" com.naiwaguo.testhost data)
-for mode in home-light home-dark dock-settings dock-sizes fonts icons community community-dark support-light support-dark backup privacy privacy-dark; do
+for mode in home-light home-dark dock-settings dock-sizes fonts icons community community-dark support-light support-dark backup backup-dark; do
   xcrun simctl terminate "$DEVICE" com.naiwaguo.testhost >/dev/null 2>&1 || true
   test ! -f "$CONTAINER/Documents/preview.png" || unlink "$CONTAINER/Documents/preview.png"
   case "$mode" in
     home-light) flags=(--preview-settings --scroll-bottom);;
     backup) flags=(--preview-backup);;
-    privacy) flags=(--preview-privacy);;
-    privacy-dark) flags=(--preview-privacy --dark);;
+    backup-dark) flags=(--preview-backup --dark);;
     home-dark) flags=(--preview-settings --dark --scroll-bottom);;
     dock-settings) flags=(--preview-settings --dock-settings);;
     dock-sizes) flags=(--preview-settings --dock-settings --scroll-bottom);;

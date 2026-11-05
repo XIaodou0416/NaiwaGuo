@@ -17,19 +17,19 @@ static NSString *const NGPreferenceDockHeight=@"com.naiwaguo.appearance.dockHeig
 static NSString *const NGPreferenceDockLength=@"com.naiwaguo.appearance.dockLength";
 static NSString *const NGPreferenceDockSearchSize=@"com.naiwaguo.appearance.dockSearchSize";
 static NSString *const NGPreferenceDockContent=@"com.naiwaguo.appearance.dockContent";
-static NSInteger NGDockContentMode(void) { NSInteger n=[NSUserDefaults.standardUserDefaults integerForKey:NGPreferenceDockContent]; return n>=0 && n<=2 ? n : 0; }
+static NSInteger NGDockContentMode(void) { NSInteger n=NGFeatureInteger(NGPreferenceDockContent); return n>=0 && n<=2 ? n : 0; }
 static NSInteger NGDockCollapseSide(void) {
     if (!NGDockNativeLiquidAvailable()) return 0;
-    if (@available(iOS 26.0,*)) { if (UIDevice.currentDevice.userInterfaceIdiom==UIUserInterfaceIdiomPhone) { NSInteger n=[NSUserDefaults.standardUserDefaults integerForKey:NGPreferenceDockCollapse]; return n>=1 && n<=3 ? n : 0; } } return 0;
+    if (@available(iOS 26.0,*)) { if (UIDevice.currentDevice.userInterfaceIdiom==UIUserInterfaceIdiomPhone) { NSInteger n=NGFeatureInteger(NGPreferenceDockCollapse); return n>=1 && n<=3 ? n : 0; } } return 0;
 }
-static CGFloat NGDockSize(NSString *key) { id n=[NSUserDefaults.standardUserDefaults objectForKey:key]; CGFloat value=n ? [n doubleValue] : 100; return isfinite(value) ? MIN(1,MAX([key isEqualToString:NGPreferenceDockLength]?0.8:0.6,value/100)) : 1; }
+static CGFloat NGDockSize(NSString *key) { id n=NGFeatureObject(key); CGFloat value=n ? [n doubleValue] : 100; return isfinite(value) ? MIN(1,MAX([key isEqualToString:NGPreferenceDockLength]?0.8:0.6,value/100)) : 1; }
 static NSString *const NGPreferenceDock = @"com.naiwaguo.appearance.dock";
 static NSString *const NGPreferenceHiddenDockItems = @"com.naiwaguo.appearance.hiddenDockItems";
 static NSString *const NGPreferenceDockIconStyle = @"com.naiwaguo.appearance.dockIconStyle";
 static NSString *const NGPreferenceDockNormalColor = @"com.naiwaguo.appearance.dockColor.normal";
 static NSString *const NGPreferenceDockSelectedColor = @"com.naiwaguo.appearance.dockColor.selected";
 static UIColor *NGDockColor(BOOL selected, UIUserInterfaceStyle style) {
-    NSArray *rgba = [NSUserDefaults.standardUserDefaults arrayForKey:selected ? NGPreferenceDockSelectedColor : NGPreferenceDockNormalColor];
+    NSArray *rgba = NGFeatureArray(selected ? NGPreferenceDockSelectedColor : NGPreferenceDockNormalColor);
     if (rgba.count == 4) {
         for (id value in rgba) if (![value isKindOfClass:NSNumber.class] || !isfinite([value doubleValue])) return selected ? UIColor.systemBlueColor : UIColor.labelColor;
         return [UIColor colorWithRed:MIN(1, MAX(0, [rgba[0] doubleValue])) green:MIN(1, MAX(0, [rgba[1] doubleValue])) blue:MIN(1, MAX(0, [rgba[2] doubleValue])) alpha:MIN(1, MAX(0, [rgba[3] doubleValue]))];
@@ -48,7 +48,7 @@ static NSArray<NSString *> *NGDockItemTitles(void) { return @[@"首页", @"剧�
 static NSArray<NSString *> *NGDockIconStyles(void) { return @[@"original", @"minimal", @"vivid", @"capsule"]; }
 static NSArray<NSString *> *NGDockIconStyleTitles(void) { return @[@"清简导航", @"柔角线条", @"光影剧场", @"几何卡片"]; }
 static NSString *NGDockIconStyle(void) {
-    NSString *style = [NSUserDefaults.standardUserDefaults stringForKey:NGPreferenceDockIconStyle];
+    NSString *style = NGFeatureString(NGPreferenceDockIconStyle);
     return [NGDockIconStyles() containsObject:style] ? style : @"original";
 }
 static NSString *NGDockIconImageKey(NSUInteger index) { return [NSString stringWithFormat:@"com.naiwaguo.appearance.dockIconImage.%lu", (unsigned long)index]; }
@@ -67,10 +67,10 @@ static UIImage *NGDockIcon(NSUInteger index, BOOL selected) {
         filled = @[@"square.on.square.fill", @"film.fill", @"shippingbox.fill", @"person.crop.square.filled.and.at.rectangle.fill"];
     }
     NSString *symbol = (selected ? filled : normal)[MIN(index, 3)];
-    NSData *customData = [NSUserDefaults.standardUserDefaults dataForKey:NGDockIconImageKey(index)];
+    NSData *customData = NGFeatureData(NGDockIconImageKey(index));
     UIImage *customImage = customData.length ? [UIImage imageWithData:customData] : nil;
     if (customImage) return [NGIconImageOnCanvas(customImage, 28, 26) imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
-    NSString *custom = [NSUserDefaults.standardUserDefaults stringForKey:[NSString stringWithFormat:@"com.naiwaguo.appearance.dockIcon.%lu", (unsigned long)index]];
+    NSString *custom = NGFeatureString([NSString stringWithFormat:@"com.naiwaguo.appearance.dockIcon.%lu", (unsigned long)index]);
     if (custom.length) symbol = custom;
     UIImageSymbolWeight weight = [style isEqualToString:@"minimal"] ? UIImageSymbolWeightRegular : UIImageSymbolWeightMedium;
     return [UIImage systemImageNamed:symbol withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:21 weight:weight]] ?: [UIImage systemImageNamed:@[@"house",@"play.rectangle",@"cart",@"person"][MIN(index,3)]];
@@ -137,9 +137,9 @@ static UIImage *NGDockIconCaptionImage(UIImage *icon, NSString *title, UIColor *
 static void NGDockApplyRenderedImages(UITabBarItem *item, NSUInteger index, UIUserInterfaceStyle style) {
     NSString *title = item.accessibilityLabel ?: item.title;
     if (!title.length) title = NGDockItemTitles()[MIN(index, NGDockItemTitles().count - 1)];
-    NSData *customData = [NSUserDefaults.standardUserDefaults dataForKey:NGDockIconImageKey(index)];
-    NSString *customSymbol = [NSUserDefaults.standardUserDefaults stringForKey:[NSString stringWithFormat:@"com.naiwaguo.appearance.dockIcon.%lu", (unsigned long)index]] ?: @"";
-    NSString *key = [NSString stringWithFormat:@"%@|%@|%@|%@|%lu|%ld|%@|%@", title, NGDockIconStyle(), customSymbol, @(customData.hash), (unsigned long)style, (long)NGDockContentMode(), [NSUserDefaults.standardUserDefaults arrayForKey:NGPreferenceDockNormalColor], [NSUserDefaults.standardUserDefaults arrayForKey:NGPreferenceDockSelectedColor]];
+    NSData *customData = NGFeatureData(NGDockIconImageKey(index));
+    NSString *customSymbol = NGFeatureString([NSString stringWithFormat:@"com.naiwaguo.appearance.dockIcon.%lu", (unsigned long)index]) ?: @"";
+    NSString *key = [NSString stringWithFormat:@"%@|%@|%@|%@|%lu|%ld|%@|%@", title, NGDockIconStyle(), customSymbol, @(customData.hash), (unsigned long)style, (long)NGDockContentMode(), NGFeatureArray(NGPreferenceDockNormalColor), NGFeatureArray(NGPreferenceDockSelectedColor)];
     NGDockRenderedItemState *state = objc_getAssociatedObject(item, &NGDockRenderedItemAssociation);
     if (state && [state.key isEqualToString:key]) {
         if (item.image != state.normalImage) item.image = state.normalImage;
@@ -165,7 +165,7 @@ static NSString *NGDockItemKey(NSUInteger index) {
     return index < NGDockItemKeys().count ? NGDockItemKeys()[index] : [NSString stringWithFormat:@"tab.%lu", (unsigned long)index];
 }
 static NSSet<NSString *> *NGHiddenDockItems(void) {
-    id value = [NSUserDefaults.standardUserDefaults objectForKey:NGPreferenceHiddenDockItems];
+    id value = NGFeatureObject(NGPreferenceHiddenDockItems);
     return [value isKindOfClass:NSArray.class] ? [NSSet setWithArray:value] : [NSSet set];
 }
 
@@ -326,7 +326,7 @@ static void NGApplyDockItems(UITabBarController *host) {
         selected = replacement;
     }
 
-    BOOL enabled = [NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceDock];
+    BOOL enabled = NGFeatureBool(NGPreferenceDock);
     if (!enabled && dock) {
         NGDockRestoreNativeContent(dock);
         host.tabBar.hidden = dock.systemBarHidden;
@@ -566,7 +566,7 @@ static void NGUpdateDock(void) {
     [menu addAction:[UIAlertAction actionWithTitle:@"从照片上传" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) { NGPresentIconPhotoPicker(self, imageKey); }]];
     [menu addAction:[UIAlertAction actionWithTitle:@"输入 SF Symbols 名称" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"输入图标名称" message:@"例如 house.fill、film、person.crop.circle" preferredStyle:UIAlertControllerStyleAlert];
-        [alert addTextFieldWithConfigurationHandler:^(UITextField *field) { field.text = [NSUserDefaults.standardUserDefaults stringForKey:key]; field.placeholder = @"house.fill"; field.autocapitalizationType = UITextAutocapitalizationTypeNone; }];
+        [alert addTextFieldWithConfigurationHandler:^(UITextField *field) { field.text = NGFeatureString(key); field.placeholder = @"house.fill"; field.autocapitalizationType = UITextAutocapitalizationTypeNone; }];
         [alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
         [alert addAction:[UIAlertAction actionWithTitle:@"保存" style:UIAlertActionStyleDefault handler:^(UIAlertAction *save) { NSString *name = alert.textFields.firstObject.text; if (name.length && [UIImage systemImageNamed:name]) { [NSUserDefaults.standardUserDefaults setObject:name forKey:key]; [NSUserDefaults.standardUserDefaults removeObjectForKey:imageKey]; } else { [NSUserDefaults.standardUserDefaults removeObjectForKey:key]; [NSUserDefaults.standardUserDefaults removeObjectForKey:imageKey]; } NGUpdateDock(); [tableView reloadData]; }]];
         [self presentViewController:alert animated:YES completion:nil];

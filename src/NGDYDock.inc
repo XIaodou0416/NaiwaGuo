@@ -70,7 +70,7 @@ static void NGDockInstallInkHooks(void) {
             SEL sel=NSSelectorFromString(name); Method method=class_getInstanceMethod(UITabBar.class,sel); IMP original=method_getImplementation(method); BOOL selected=[name isEqual:@"setTintColor:"];
             class_replaceMethod(UITabBar.class,sel,imp_implementationWithBlock(^(UITabBar *bar,UIColor *value){
                 NGSystemDock *dock=((NGDockInkOwner *)objc_getAssociatedObject(bar,&NGDockInkOwnerKey)).dock;
-                if (dock && [NSUserDefaults.standardUserDefaults arrayForKey:selected ? NGPreferenceDockSelectedColor : NGPreferenceDockNormalColor].count==4) value=NGDockColor(selected,dock.inkStyle);
+                if (dock && NGFeatureArray(selected ? NGPreferenceDockSelectedColor : NGPreferenceDockNormalColor).count==4) value=NGDockColor(selected,dock.inkStyle);
                 ((void(*)(id,SEL,id))original)(bar,sel,value);
             }),method_getTypeEncoding(method));
         }
@@ -87,7 +87,7 @@ static UIView *NGDockFindPlatter(UIView *root,BOOL square) {
     return square ? nil : fallback;
 }
 static UIGlassEffect *NGDockGlassEffect(UIUserInterfaceStyle style,BOOL interactive) API_AVAILABLE(ios(26.0)) {
-    BOOL clear=[NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceDockClear];
+    BOOL clear=NGFeatureBool(NGPreferenceDockClear);
     UIGlassEffect *effect=[UIGlassEffect effectWithStyle:clear ? UIGlassEffectStyleClear : UIGlassEffectStyleRegular];
     if (clear && style==UIUserInterfaceStyleDark) effect.tintColor=[UIColor colorWithWhite:0 alpha:0.3];
     effect.interactive=interactive; return effect;
@@ -96,7 +96,7 @@ static void NGDockApplyPlatterGlass(UIView *platter,UIUserInterfaceStyle style) 
     if (!platter) return;
     if (@available(iOS 26.0,*)) {
         NSNumber *applied=objc_getAssociatedObject(platter,&NGDockAppliedGlassKey);
-        BOOL clear=[NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceDockClear];
+        BOOL clear=NGFeatureBool(NGPreferenceDockClear);
         if (!clear) {
             if (!applied) return; id original=objc_getAssociatedObject(platter,&NGDockOriginalGlassKey);
             @try { [platter setValue:original==NSNull.null ? nil : original forKey:@"glassEffect"]; } @catch (__unused NSException *exception) {}
@@ -202,8 +202,8 @@ static BOOL NGDockInvokeAction(NGSystemDock *dock);
 }
 - (void)playTapFeedback {
     if (!self.host || !self.view.window || self.view.hidden || self.view.alpha<0.01 ||
-        ![NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceDock] ||
-        ![NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceDockHaptics]) return;
+        !NGFeatureBool(NGPreferenceDock) ||
+        !NGFeatureBool(NGPreferenceDockHaptics)) return;
     if (!self.tapFeedback) self.tapFeedback=[UISelectionFeedbackGenerator new];
     [self.tapFeedback selectionChanged];
     [self.tapFeedback prepare];
@@ -266,7 +266,7 @@ static BOOL NGDockInvokeAction(NGSystemDock *dock);
         if (self.legacyMaterial) { [self layoutLegacyDock]; return; }
         CGSize size=self.view.bounds.size;
         UIUserInterfaceStyle style=self.view.window.windowScene.traitCollection.userInterfaceStyle; if (style==UIUserInterfaceStyleUnspecified) style=self.traitCollection.userInterfaceStyle;
-        BOOL clear=[NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceDockClear];
+        BOOL clear=NGFeatureBool(NGPreferenceDockClear);
         if (self.glassStyle!=style || self.clearApplied!=clear) { self.glassStyle=style; self.clearApplied=clear; self.tabBar.overrideUserInterfaceStyle=style; self.searchKey.overrideUserInterfaceStyle=style; if (@available(iOS 26.0,*)) self.searchKey.effect=NGDockGlassEffect(style,YES); }
         UIUserInterfaceStyle ink=style;
         if (self.selectedIndex<self.buttons.count) {

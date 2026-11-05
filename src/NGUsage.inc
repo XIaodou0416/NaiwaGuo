@@ -1,13 +1,12 @@
 static NSString *const NGUsageInstallation=@"com.naiwaguo.service.installation";
 static NSString *const NGUsageSecret=@"com.naiwaguo.service.installationSecret";
 static NSString *const NGUsageLastSent=@"com.naiwaguo.service.lastSent";
-static NSString *const NGUsageNoticeShown=@"com.naiwaguo.service.noticeShown";
+static NSString *const NGUsageBans=@"com.naiwaguo.service.blockedIDs";
 static NSString *const NGUsageOrigin=@"https://naiwa.xxdou.icu";
 static BOOL NGUsageBusy;
 static NSString *NGUsageLastIdentity;
 #if NG_TEST
 static BOOL NGUsageTestNetworking;
-static BOOL NGUsageTestNotices;
 #endif
 
 static NSString *NGHongguoUserID(void) {
@@ -48,14 +47,29 @@ static NSDictionary *NGUsagePayload(NSUserDefaults *defaults,NSString *uid) {
     return @{@"installation":[defaults stringForKey:NGUsageInstallation] ?: @"",@"secret":[defaults stringForKey:NGUsageSecret] ?: @"",@"hongguo_id":uid ?: @"",@"plugin_version":NGVersion,@"host_version":[NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"unknown",@"system_version":UIDevice.currentDevice.systemVersion,@"schema_version":@1};
 }
 
-static void NGUsageSend(void) {
+static void NGUsageApplyBlock(NSString *uid,BOOL blocked) {
+    if (!uid.length) return;
     NSUserDefaults *defaults=NSUserDefaults.standardUserDefaults;
+    NSMutableSet *ids=[NSMutableSet setWithArray:[defaults arrayForKey:NGUsageBans] ?: @[]];
+    if (blocked) [ids addObject:uid]; else [ids removeObject:uid];
+    [defaults setObject:ids.allObjects forKey:NGUsageBans];
+}
+static void NGUsageSyncAccess(void) {
+    NSString *uid=NGHongguoUserID();
+    BOOL blocked=uid.length && [[NSUserDefaults.standardUserDefaults arrayForKey:NGUsageBans] containsObject:uid];
+    if (blocked==NGBlocked) return;
+    NGBlocked=blocked; NGRefreshFeatureAccess();
+    [NSNotificationCenter.defaultCenter postNotificationName:NGAccessChanged object:nil];
+}
+static void NGUsageSend(BOOL force) {
+    NSUserDefaults *defaults=NSUserDefaults.standardUserDefaults;
+    NGUsageSyncAccess();
 #if NG_TEST
     if (!NGUsageTestNetworking) return;
 #endif
     if (NGUsageBusy) return;
     NSString *uid=NGHongguoUserID();
-    if ([NGUsageLastIdentity isEqual:uid] && NSDate.date.timeIntervalSince1970-[defaults doubleForKey:NGUsageLastSent]<21600) return;
+    if (!force && [NGUsageLastIdentity isEqual:uid] && NSDate.date.timeIntervalSince1970-[defaults doubleForKey:NGUsageLastSent]<60) return;
     NSDictionary *payload=NGUsagePayload(defaults,uid);
     NGUsageBusy=YES;
     NSMutableURLRequest *request=[NSMutableURLRequest requestWithURL:[NSURL URLWithString:[NGUsageOrigin stringByAppendingString:@"/api/guo/v1/usage"]]];
@@ -65,27 +79,22 @@ static void NGUsageSend(void) {
     NSURLSession *session=[NSURLSession sessionWithConfiguration:configuration delegate:[NGUsageTransport new] delegateQueue:nil];
     [[session dataTaskWithRequest:request completionHandler:^(NSData *data,NSURLResponse *response,NSError *error){
         NSInteger code=[response isKindOfClass:NSHTTPURLResponse.class] ? ((NSHTTPURLResponse *)response).statusCode : 0;
+        id body=data.length ? [NSJSONSerialization JSONObjectWithData:data options:0 error:nil] : nil;
         [session finishTasksAndInvalidate];
         dispatch_async(dispatch_get_main_queue(),^{
             NGUsageBusy=NO;
-            if (!error && code==200) { [defaults setDouble:NSDate.date.timeIntervalSince1970 forKey:NGUsageLastSent]; NGUsageLastIdentity=uid; }
+            if (!error && code==200 && [body isKindOfClass:NSDictionary.class] && [body[@"ok"] isEqual:@YES]) {
+                [defaults setDouble:NSDate.date.timeIntervalSince1970 forKey:NGUsageLastSent]; NGUsageLastIdentity=uid;
+                if ([body[@"hongguo_id"] isEqual:uid] && [body[@"blocked"] isKindOfClass:NSNumber.class]) NGUsageApplyBlock(uid,[body[@"blocked"] boolValue]);
+                NGUsageSyncAccess();
+            }
         });
     }] resume];
 }
-static void NGUsageForeground(void) { NGUsageSend(); }
-
-@interface NGUsageSettingsController : NGSettingsTableController
-@end
-@implementation NGUsageSettingsController
-- (instancetype)init { return [super initWithStyle:UITableViewStyleInsetGrouped]; }
-- (void)viewDidLoad { [super viewDidLoad]; self.title=@"使用统计与隐私"; }
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return 2; }
-- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section { return @"启动红果后，奶蛙会自动向 naiwa.xxdou.icu 发送红果版本、奶蛙版本、iOS 版本、红果 ID（未登录或未读取时为空）和随机安装编号，用于统计使用人数与版本分布。不读取登录凭据、观看内容或联系方式。网络异常不影响插件功能，统计凭据不写入设置备份。日趋势保留 90 天，180 天未活跃的安装自动删除。"; }
-- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)path {
-    UITableViewCell *cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
-    cell.selectionStyle=UITableViewCellSelectionStyleNone;
-    if (!path.row) { cell.textLabel.text=@"使用统计"; cell.detailTextLabel.text=@"随应用启动自动上报"; }
-    else { cell.textLabel.text=@"当前红果 ID"; NSString *uid=NGHongguoUserID();cell.detailTextLabel.text=uid.length ? uid : @"未读取到，统计时留空"; }
-    return cell;
+static void NGUsageForeground(void) { NGUsageSend(NO); }
+static void NGUsageStart(void) {
+    NGUsageSyncAccess(); NGUsageSend(YES);
+    static dispatch_once_t once;dispatch_once(&once,^{
+        [NSTimer scheduledTimerWithTimeInterval:60 repeats:YES block:^(NSTimer *timer){if(UIApplication.sharedApplication.applicationState==UIApplicationStateActive)NGUsageForeground();}];
+    });
 }
-@end

@@ -27,7 +27,7 @@ static void NGPanelRepairSurface(UIView *root);
     });
 }
 @end
-static BOOL NGCommentGlassEnabled(void) { return [NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceCommentGlass]; }
+static BOOL NGCommentGlassEnabled(void) { return NGFeatureBool(NGPreferenceCommentGlass); }
 static BOOL NGSharePanelController(id controller) {
     NSString *name = NGClassName(controller);
     return [name containsString:@"SharePanel"] || [name containsString:@"ShareViewController"] ||
@@ -68,7 +68,7 @@ static UIView *NGCommentPanelRoot(UIView *source) {
 @end
 @implementation NGPanelLayerState @end
 static BOOL NGPanelLayerActive(NGPanelLayerState *state) {
-    return state && [NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceShareGlass] && objc_getAssociatedObject(state.surface,&NGPanelSurfaceAssociation) && (state.owner==state.surface || [state.owner isDescendantOfView:state.surface]);
+    return state && NGFeatureBool(NGPreferenceShareGlass) && objc_getAssociatedObject(state.surface,&NGPanelSurfaceAssociation) && (state.owner==state.surface || [state.owner isDescendantOfView:state.surface]);
 }
 static BOOL NGPanelFlatBackdrop(id contents) {
     if (!contents || CFGetTypeID((__bridge CFTypeRef)contents)!=CGImageGetTypeID()) return NO;
@@ -127,7 +127,7 @@ static UIVisualEffectView *NGPanelMaterial(UIView *root, NSString *kind, CGRect 
     }
     glass.frame = frame; glass.hidden=NO; glass.alpha=1;
     BOOL share = NGPanelShareKind(kind);
-    BOOL clear = share && [NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceShareGlassClear];
+    BOOL clear = share && NGFeatureBool(NGPreferenceShareGlassClear);
     NSString *material = [NSString stringWithFormat:@"%d|%ld", clear, (long)root.traitCollection.userInterfaceStyle];
     if (CGRectGetWidth(frame) >= 8 && CGRectGetHeight(frame) >= 8 && (!glass.effect || ![objc_getAssociatedObject(glass, &NGPanelMaterialStateAssociation) isEqual:material])) {
         if (@available(iOS 26.0, *)) {
@@ -139,7 +139,7 @@ static UIVisualEffectView *NGPanelMaterial(UIView *root, NSString *kind, CGRect 
         } else glass.effect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemMaterial];
         objc_setAssociatedObject(glass, &NGPanelMaterialStateAssociation, material, OBJC_ASSOCIATION_COPY_NONATOMIC);
     }
-    CGFloat opacity = [NSUserDefaults.standardUserDefaults objectForKey:NGPreferenceCommentGlassOpacity] ? [NSUserDefaults.standardUserDefaults floatForKey:NGPreferenceCommentGlassOpacity] : 0.32;
+    CGFloat opacity = NGFeatureObject(NGPreferenceCommentGlassOpacity) ? NGFeatureFloat(NGPreferenceCommentGlassOpacity) : 0.32;
     glass.contentView.backgroundColor = share ? UIColor.clearColor : [UIColor.secondarySystemBackgroundColor colorWithAlphaComponent:MIN(0.8, MAX(0, opacity))];
     if (glass.superview != root) [root insertSubview:glass atIndex:0];
     objc_setAssociatedObject(root, &NGPanelSurfaceAssociation, kind, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
@@ -148,7 +148,7 @@ static UIVisualEffectView *NGPanelMaterial(UIView *root, NSString *kind, CGRect 
 }
 static void NGPanelRepairSurface(UIView *root) {
     NSString *kind=objc_getAssociatedObject(root,&NGPanelSurfaceAssociation);
-    BOOL enabled=NGPanelShareKind(kind) ? [NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceShareGlass] : NGCommentGlassEnabled();
+    BOOL enabled=NGPanelShareKind(kind) ? NGFeatureBool(NGPreferenceShareGlass) : NGCommentGlassEnabled();
     if (!kind || !enabled || NGPanelUpdating) return;
     NGPanelUpdating=YES; @try { NGPanelMaterial(root,kind,root.bounds); } @finally { NGPanelUpdating=NO; }
 }
@@ -205,7 +205,7 @@ static void NGPanelRefreshInsertedBranch(UIView *view) {
     if (NGPanelUpdating || !NSThread.isMainThread || [view.accessibilityIdentifier hasPrefix:@"NaiwaGuo."]) return;
     UIView *surface = NGPanelManagedSurface(view); if (!surface) return;
     BOOL share = NGPanelShareKind(objc_getAssociatedObject(surface, &NGPanelSurfaceAssociation));
-    if (share ? ![NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceShareGlass] : !NGCommentGlassEnabled()) return;
+    if (share ? !NGFeatureBool(NGPreferenceShareGlass) : !NGCommentGlassEnabled()) return;
     NGPanelRepairSurface(surface);
     NGPanelUpdating = YES;
     @try { NGPanelClearBranch(view, surface, share); } @finally { NGPanelUpdating = NO; }
@@ -253,7 +253,7 @@ static void NGDecorateShareController(UIViewController *controller) {
     NGInstallPanelDrawingHooks();
     if (!NGSharePanelController(controller) || !controller.isViewLoaded || NGPanelUpdating) return;
     UIView *root = controller.view;
-    if (![NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceShareGlass]) { NGPanelRestore(root); return; }
+    if (!NGFeatureBool(NGPreferenceShareGlass)) { NGPanelRestore(root); return; }
     NGPanelUpdating = YES;
     @try { NGPanelMaterial(root, [NGClassName(controller) isEqualToString:@"FQVShortVideoSettingsViewController"] ? @"More" : ([NGClassName(controller) isEqualToString:@"FQVShortVideoNewSpeedSelectController"] ? @"Speed" : @"Share"), root.bounds); NGPanelClearCovers(root, YES); }
     @finally { NGPanelUpdating = NO; }
@@ -262,7 +262,7 @@ static void NGUpdateCommentGlass(void) {
     if (!NSThread.isMainThread) { dispatch_async(dispatch_get_main_queue(), ^{ NGUpdateCommentGlass(); }); return; }
     for (UIView *root in NGPanelSurfaces.allObjects) {
         NSString *kind = objc_getAssociatedObject(root, &NGPanelSurfaceAssociation);
-        if ((!NGPanelShareKind(kind) && !NGCommentGlassEnabled()) || (NGPanelShareKind(kind) && ![NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceShareGlass])) NGPanelRestore(root);
+        if ((!NGPanelShareKind(kind) && !NGCommentGlassEnabled()) || (NGPanelShareKind(kind) && !NGFeatureBool(NGPreferenceShareGlass))) NGPanelRestore(root);
     }
     NSMutableArray *queue = [NSMutableArray array]; for (UIWindow *window in NGCaptureWindows()) if (window.windowLevel == UIWindowLevelNormal) [queue addObject:window];
     NSMutableArray *editors = [NSMutableArray array];
@@ -285,7 +285,7 @@ static void NGInstallCommentGlassHooks(void) {
         IMP original = method_getImplementation(method);
         IMP replacement = imp_implementationWithBlock(^(UIView *view, UIColor *color) {
             NGPanelCoverState *state = objc_getAssociatedObject(view, &NGPanelCoverAssociation);
-            BOOL enabled = state && !NGPanelUpdating && (state.share ? [NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceShareGlass] : NGCommentGlassEnabled());
+            BOOL enabled = state && !NGPanelUpdating && (state.share ? NGFeatureBool(NGPreferenceShareGlass) : NGCommentGlassEnabled());
             if (enabled && objc_getAssociatedObject(state.surface, &NGPanelSurfaceAssociation) &&
                 (view == state.surface || [view isDescendantOfView:state.surface])) {
                 objc_setAssociatedObject(view, &NGPanelBackgroundAssociation, color ?: NSNull.null, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
@@ -319,7 +319,7 @@ static void NGInstallCommentGlassHooks(void) {
         SEL effect=@selector(setEffect:); m=class_getInstanceMethod(UIVisualEffectView.class,effect); IMP setEffect=method_getImplementation(m);
         method_setImplementation(m,imp_implementationWithBlock(^(UIVisualEffectView *view,UIVisualEffect *value){
             NGPanelCoverState *state=objc_getAssociatedObject(view,&NGPanelCoverAssociation);
-            if (!NGPanelUpdating && state.share && [NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceShareGlass] && [view isDescendantOfView:state.surface] && objc_getAssociatedObject(view,&NGPanelEffectAssociation)) { objc_setAssociatedObject(view,&NGPanelEffectAssociation,value ?: NSNull.null,OBJC_ASSOCIATION_RETAIN_NONATOMIC); value=nil; }
+            if (!NGPanelUpdating && state.share && NGFeatureBool(NGPreferenceShareGlass) && [view isDescendantOfView:state.surface] && objc_getAssociatedObject(view,&NGPanelEffectAssociation)) { objc_setAssociatedObject(view,&NGPanelEffectAssociation,value ?: NSNull.null,OBJC_ASSOCIATION_RETAIN_NONATOMIC); value=nil; }
             ((void(*)(id,SEL,id))setEffect)(view,effect,value);
         }));
         [installed addObject:@"CALayer.panelRepaint"];
@@ -384,7 +384,7 @@ static void NGInstallCommentGlassHooks(void) {
         IMP original = method_getImplementation(method);
         IMP replacement = imp_implementationWithBlock(^(UIView *view) {
             ((void (*)(id, SEL))original)(view, selector);
-            if (NGPanelUpdating || ![NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceShareGlass]) return;
+            if (NGPanelUpdating || !NGFeatureBool(NGPreferenceShareGlass)) return;
             for (UIResponder *responder = view.nextResponder; responder; responder = responder.nextResponder) {
                 if (NGSharePanelController(responder)) { NGPanelUpdating = YES; @try { NGPanelClearCovers(view, YES); } @finally { NGPanelUpdating = NO; } break; }
             }
@@ -404,8 +404,8 @@ static void NGInstallCommentGlassHooks(void) {
     UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
     cell.textLabel.text = @[@"关闭", @"柔雾玻璃", @"清透玻璃"][path.row];
     cell.imageView.image = [UIImage systemImageNamed:@[@"circle.slash", @"drop.halffull", @"drop"][path.row]];
-    BOOL enabled = [NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceShareGlass];
-    BOOL clear = [NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceShareGlassClear];
+    BOOL enabled = NGFeatureBool(NGPreferenceShareGlass);
+    BOOL clear = NGFeatureBool(NGPreferenceShareGlassClear);
     cell.accessoryType = path.row == (enabled ? (clear ? 2 : 1) : 0) ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone;
     return cell;
 }

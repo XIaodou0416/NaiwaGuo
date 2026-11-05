@@ -15,14 +15,14 @@
 }
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)path { return path.section==4 ? 74 : UITableViewAutomaticDimension; }
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)path {
-    UITableViewCell *cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil]; NSUserDefaults *d=NSUserDefaults.standardUserDefaults;
+    UITableViewCell *cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
     if (path.section==0) {
         BOOL haptic=path.row==1; NSString *key=haptic ? NGPreferenceDockHaptics : NGPreferenceDock;
         cell.textLabel.text=haptic ? @"按键触动反馈" : (NGDockNativeLiquidAvailable() ? @"悬浮液态底栏" : @"悬浮磨砂底栏");
-        UISwitch *toggle=[UISwitch new]; toggle.on=[d boolForKey:key]; toggle.accessibilityIdentifier=key;
+        UISwitch *toggle=[UISwitch new]; toggle.on=NGFeatureBool(key); toggle.accessibilityIdentifier=key;
         [toggle addTarget:self action:haptic ? @selector(hapticsChanged:) : @selector(enabledChanged:) forControlEvents:UIControlEventValueChanged]; cell.accessoryView=toggle;
     }
-    else if (path.section==1) { cell.textLabel.text=(NGDockNativeLiquidAvailable() ? @[@"普通液态",@"清透液态"] : @[@"普通磨砂",@"轻薄磨砂"])[path.row]; cell.accessoryType=path.row==[d boolForKey:NGPreferenceDockClear] ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone; }
+    else if (path.section==1) { cell.textLabel.text=(NGDockNativeLiquidAvailable() ? @[@"普通液态",@"清透液态"] : @[@"普通磨砂",@"轻薄磨砂"])[path.row]; cell.accessoryType=path.row==NGFeatureBool(NGPreferenceDockClear) ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone; }
     else if (path.section==2) { cell.textLabel.text=@[@"关闭",@"收缩到左侧",@"收缩到右侧",@"收缩到中间"][path.row]; cell.accessoryType=path.row==NGDockCollapseSide() ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone; }
     else if (path.section==3) { cell.textLabel.text=@[@"文字",@"仅图标",@"图标与文字"][path.row]; cell.accessoryType=path.row==NGDockContentMode() ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone; }
     else if (path.section==4) {

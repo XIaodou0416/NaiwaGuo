@@ -20,7 +20,7 @@ static BOOL NGFullscreenApplying;
 static BOOL NGFullscreenDiscovering;
 
 static BOOL NGFullscreenEnabled(void) {
-    return [NSUserDefaults.standardUserDefaults boolForKey:NGPreferencePlaybackFullscreen];
+    return NGFeatureBool(NGPreferencePlaybackFullscreen);
 }
 static BOOL NGFullscreenPlayer(UIView *view) {
     return [NGClassName(view) isEqualToString:@"FQVShortVideoPlayerCellView"];

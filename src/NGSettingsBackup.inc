@@ -37,6 +37,8 @@ static NSDictionary *NGReadSettingsBackup(NSData *data,NSError **error) {
     return archive;
 }
 static BOOL NGRestoreSettingsBackup(NSDictionary *archive,NSError **error) {
+    if (![archive[@"preferences"] isKindOfClass:NSDictionary.class]) { if(error)*error=NGBackupError(@"备份设置无效。");return NO; }
+    for (NSString *key in archive[@"preferences"]) if (!NGBackupValue(key,archive[@"preferences"][key])) { if(error)*error=NGBackupError(@"备份包含无效设置，未作更改。");return NO; }
     NSMutableDictionary *preferences=[archive[@"preferences"] mutableCopy];
     id font=archive[@"font"];
     if(font){
@@ -49,13 +51,20 @@ static BOOL NGRestoreSettingsBackup(NSDictionary *archive,NSError **error) {
         preferences[NGPreferenceFontFile]=url.lastPathComponent;if(name)preferences[NGPreferenceFontName]=name;
     }
     NSUserDefaults *defaults=NSUserDefaults.standardUserDefaults;
-    NSMutableDictionary *domain=[[defaults persistentDomainForName:NSBundle.mainBundle.bundleIdentifier] ?: @{} mutableCopy];
-    for(NSString *key in domain.allKeys)if(NGBackupKey(key))[domain removeObjectForKey:key];
-    [domain addEntriesFromDictionary:preferences]; [defaults setPersistentDomain:domain forName:NSBundle.mainBundle.bundleIdentifier];
+    NSDictionary *domain=[defaults persistentDomainForName:NSBundle.mainBundle.bundleIdentifier] ?: @{};
+    for(NSString *key in domain)if(NGBackupKey(key) && !preferences[key])[defaults removeObjectForKey:key];
+    for(NSString *key in preferences)[defaults setObject:preferences[key] forKey:key];
     return YES;
 }
 static void NGApplyRestoredSettings(void) {
     NGLoadTypographyFont(); NGRefreshTypography(); NGUpdateDock(); NGUpdatePlaybackGlass(); NGUpdatePlaybackHeaderGlass(); NGUpdateCommentGlass(); NGUpdatePlaybackFullscreen(); NGUpdatePlaybackTextLayout(); NGRefreshPlaybackCorners(); NGSetPerformanceEnabled([NSUserDefaults.standardUserDefaults boolForKey:NGPreferencePerformance]); NGInstallOverlay(); NGDAudioProbePreferenceDidChange();
+}
+static void NGRefreshFeatureAccess(void) {
+    if(NGBlocked)NGDismissLivePreview();
+    NGRefreshTypography();NGUpdateDock();NGUpdatePlaybackGlass();NGUpdatePlaybackHeaderGlass();NGUpdateCommentGlass();NGUpdatePlaybackFullscreen();NGUpdatePlaybackTextLayout();NGRefreshPlaybackCorners();NGInstallOverlay();NGDAudioProbePreferenceDidChange();
+    NGPerformanceRecorder *recorder=NGPerformanceRecorder.shared;
+    if (NGFeatureBool(NGPreferencePerformance)) { if(!recorder.displayLink)[recorder start]; }
+    else if (recorder.displayLink || [recorder.state isEqual:@"paused"]) [recorder stopWithReason:@"account_blocked"];
 }
 
 @interface NGSettingsBackupController : NGSettingsTableController <UIDocumentPickerDelegate>
@@ -63,9 +72,9 @@ static void NGApplyRestoredSettings(void) {
 @end
 @implementation NGSettingsBackupController
 - (instancetype)init { return [super initWithStyle:UITableViewStyleInsetGrouped]; }
-- (void)viewDidLoad { [super viewDidLoad]; self.title=@"备份与恢复设置"; }
+- (void)viewDidLoad { [super viewDidLoad]; self.title=@"备份与恢复"; }
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return 2; }
-- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section { return @"备份包含奶蛙设置、自定义图标与当前导入字体，保存为 .naiwaguo 文件。恢复会替换奶蛙设置，不修改红果账号和其他应用数据。统计凭据、安装编号与账号 ID 不写入备份。"; }
+- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section { return @"备份包含奶蛙设置、自定义图标与当前导入字体，保存为 .naiwaguo 文件。恢复会替换奶蛙设置，不修改红果账号和其他应用数据。账号和设备凭据不写入备份。"; }
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)path {
     UITableViewCell *cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];cell.textLabel.text=path.row ? @"从文件恢复" : @"导出设置备份";cell.imageView.image=[UIImage systemImageNamed:path.row ? @"square.and.arrow.down" : @"square.and.arrow.up"];cell.accessoryType=UITableViewCellAccessoryDisclosureIndicator;return cell;
 }
@@ -74,20 +83,22 @@ static void NGApplyRestoredSettings(void) {
 - (void)dealloc { [self removeTemporaryExport]; }
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)path {
     [tableView deselectRowAtIndexPath:path animated:YES];
+    if(NGBlocked)return;
     if(path.row){UIDocumentPickerViewController *picker=[[UIDocumentPickerViewController alloc] initForOpeningContentTypes:@[UTTypeData] asCopy:YES];picker.delegate=self;[self presentViewController:picker animated:YES completion:nil];return;}
     self.tableView.userInteractionEnabled=NO;
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY,0),^{
         NSError *error=nil;NSData *data=NGCreateSettingsBackup(&error);NSURL *directory=[NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:NSUUID.UUID.UUIDString] isDirectory:YES];NSURL *file=[directory URLByAppendingPathComponent:@"奶蛙设置.naiwaguo"];
         BOOL ready=data && [NSFileManager.defaultManager createDirectoryAtURL:directory withIntermediateDirectories:YES attributes:nil error:&error] && [data writeToURL:file options:NSDataWritingAtomic error:&error];
-        dispatch_async(dispatch_get_main_queue(),^{self.tableView.userInteractionEnabled=YES;if(!ready){[NSFileManager.defaultManager removeItemAtURL:directory error:nil];[self showError:error ?: NGBackupError(@"无法创建备份。")];return;}[self removeTemporaryExport];self.temporaryExport=file;UIDocumentPickerViewController *picker=[[UIDocumentPickerViewController alloc] initForExportingURLs:@[file] asCopy:YES];picker.delegate=self;[self presentViewController:picker animated:YES completion:nil];});
+        dispatch_async(dispatch_get_main_queue(),^{self.tableView.userInteractionEnabled=!NGBlocked;if(NGBlocked){[NSFileManager.defaultManager removeItemAtURL:directory error:nil];return;}if(!ready){[NSFileManager.defaultManager removeItemAtURL:directory error:nil];[self showError:error ?: NGBackupError(@"无法创建备份。")];return;}[self removeTemporaryExport];self.temporaryExport=file;UIDocumentPickerViewController *picker=[[UIDocumentPickerViewController alloc] initForExportingURLs:@[file] asCopy:YES];picker.delegate=self;[self presentViewController:picker animated:YES completion:nil];});
     });
 }
 - (void)documentPickerWasCancelled:(UIDocumentPickerViewController *)controller { [self removeTemporaryExport]; }
 - (void)restoreArchive:(NSDictionary *)archive {
+    if(NGBlocked)return;
     self.tableView.userInteractionEnabled=NO;
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY,0),^{
         NSError *failure=nil;BOOL restored=NGRestoreSettingsBackup(archive,&failure);
-        dispatch_async(dispatch_get_main_queue(),^{self.tableView.userInteractionEnabled=YES;if(restored)NGApplyRestoredSettings();[self showError:restored ? NGBackupError(@"设置已恢复。字体或调试采集选项可能需要重新打开红果生效。") : failure ?: NGBackupError(@"恢复失败，原设置已保留。")];});
+        dispatch_async(dispatch_get_main_queue(),^{self.tableView.userInteractionEnabled=!NGBlocked;if(restored)NGApplyRestoredSettings();[self showError:restored ? NGBackupError(@"设置已恢复。字体或调试采集选项可能需要重新打开红果生效。") : failure ?: NGBackupError(@"恢复失败，原设置已保留。")];});
     });
 }
 - (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls {
@@ -96,8 +107,8 @@ static void NGApplyRestoredSettings(void) {
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY,0),^{
         BOOL access=[url startAccessingSecurityScopedResource];NSError *error=nil;NSNumber *size=nil;[url getResourceValue:&size forKey:NSURLFileSizeKey error:&error];NSData *data=(size && size.unsignedLongLongValue<=64*1024*1024) ? [NSData dataWithContentsOfURL:url options:NSDataReadingMappedIfSafe error:&error] : nil;NSDictionary *archive=NGReadSettingsBackup(data,&error);if(access)[url stopAccessingSecurityScopedResource];
         dispatch_async(dispatch_get_main_queue(),^{
-            self.tableView.userInteractionEnabled=YES;
-            void (^present)(void)=^{if(!archive){[self showError:error ?: NGBackupError(@"无法读取备份。")];return;}UIAlertController *alert=[UIAlertController alertControllerWithTitle:@"恢复设置" message:@"这会替换当前奶蛙设置。建议先导出现有设置备份，确认继续？" preferredStyle:UIAlertControllerStyleAlert];[alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];[alert addAction:[UIAlertAction actionWithTitle:@"恢复" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action){[self restoreArchive:archive];}]];[self presentViewController:alert animated:YES completion:nil];};
+            self.tableView.userInteractionEnabled=!NGBlocked;
+            void (^present)(void)=^{if(NGBlocked)return;if(!archive){[self showError:error ?: NGBackupError(@"无法读取备份。")];return;}UIAlertController *alert=[UIAlertController alertControllerWithTitle:@"恢复设置" message:@"这会替换当前奶蛙设置。建议先导出现有设置备份，确认继续？" preferredStyle:UIAlertControllerStyleAlert];[alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];[alert addAction:[UIAlertAction actionWithTitle:@"恢复" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action){[self restoreArchive:archive];}]];[self presentViewController:alert animated:YES completion:nil];};
             if(controller.presentingViewController)[controller dismissViewControllerAnimated:YES completion:present];else present();
         });
     });

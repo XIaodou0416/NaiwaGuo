@@ -12,10 +12,10 @@ static NSString *NGTypographyCachedName;
 static BOOL NGTypographyConfigured;
 static NSCache<UIFont *,UIFont *> *NGTypographyFontCache;
 static CGFloat NGTypographyScale(void) {
-    id raw=[NSUserDefaults.standardUserDefaults objectForKey:NGPreferenceFontScale]; CGFloat scale=raw ? [raw doubleValue] : 1;
+    id raw=NGFeatureObject(NGPreferenceFontScale); CGFloat scale=raw ? [raw doubleValue] : 1;
     return isfinite(scale) ? MIN(1,MAX(0.5,scale)) : 1;
 }
-static NSString *NGTypographyName(void) { return [NSUserDefaults.standardUserDefaults stringForKey:NGPreferenceFontName] ?: @""; }
+static NSString *NGTypographyName(void) { return NGFeatureString(NGPreferenceFontName) ?: @""; }
 static BOOL NGTypographyEnabled(void) { return fabs(NGTypographyScale()-1)>0.001 || NGTypographyName().length>0; }
 @interface NGTypographyState : NSObject
 @property(nonatomic,strong) UIFont *sourceFont;
