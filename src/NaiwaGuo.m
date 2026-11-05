@@ -18,7 +18,7 @@ void NGDRegisterFLEXKingProvider(void);
 #import <math.h>
 
 static NSString *const NGPluginName = @"奶蛙";
-static NSString *const NGVersion = @"0.0.9";
+static NSString *const NGVersion = @"0.1.0";
 static NSString *const NGHostBundleIdentifier = @"com.phoenix.video";
 static NSString *const NGHostExecutable = @"Eggplant";
 static NSString *const NGPrefix = @"com.naiwaguo.";
@@ -137,12 +137,14 @@ static id NGSafeJSON(id object) {
     return result;
 }
 
+#ifdef NG_TEST
 static NSData *NGJSONData(id object) {
     return [NSJSONSerialization dataWithJSONObject:NGSafeJSON(object)
                                            options:(NSJSONWritingPrettyPrinted | NSJSONWritingSortedKeys)
                                              error:nil];
 }
 
+#endif
 static NSString *NGTrimmedString(id value, NSUInteger limit) {
     if (![value isKindOfClass:NSString.class]) return nil;
     NSString *text = [(NSString *)value copy];
@@ -231,6 +233,7 @@ static UIViewController *NGTopController(void) {
 
 static NSString *NGClassName(id object);
 
+#ifdef NG_TEST
 static NSString *NGViewPath(UIView *view) {
     NSMutableArray<NSString *> *parts = [NSMutableArray array];
     for (UIView *current = view; current; current = current.superview) {
@@ -420,6 +423,7 @@ static NSDictionary *NGControllerInfo(UIViewController *controller, NSUInteger d
     return info;
 }
 
+#endif
 static NSString *NGDeviceIdentifier(void) {
     struct utsname systemInfo;
     if (uname(&systemInfo) != 0) return @"unknown";
@@ -465,6 +469,7 @@ static NSDictionary *NGEnvironment(void) {
     return environment;
 }
 
+#ifdef NG_TEST
 static NSDictionary *NGViewport(void) {
     UIWindow *window = NGBaseWindow();
     if (!window) return @{};
@@ -483,11 +488,12 @@ static NSDictionary *NGPreferenceSnapshot(void) {
     NSDictionary *all = NSUserDefaults.standardUserDefaults.dictionaryRepresentation;
     NSMutableDictionary *filtered = [NSMutableDictionary dictionary];
     [all enumerateKeysAndObjectsUsingBlock:^(NSString *key, id value, BOOL *stop) {
-        if ([key hasPrefix:NGPrefix]) filtered[key] = NGSafeJSON(value);
+        if ([key hasPrefix:NGPrefix] && ![key hasPrefix:@"com.naiwaguo.service."]) filtered[key] = NGSafeJSON(value);
     }];
     return filtered;
 }
 
+#endif
 @interface NGPerformanceRecorder : NSObject
 @property(nonatomic, strong) CADisplayLink *displayLink;
 @property(nonatomic, strong) NSMutableArray<NSDictionary *> *seconds;
@@ -752,6 +758,7 @@ static NSArray<UIWindow *> *NGCaptureWindows(void) {
     return windows;
 }
 
+#ifdef NG_TEST
 static NSDictionary *NGWindowInfo(UIWindow *window) {
     return @{
         @"class": NGClassName(window),
@@ -841,7 +848,6 @@ static NSDictionary *NGCaptureSnapshot(void) {
     };
 }
 
-#ifdef NG_TEST
 static NSURL *NGCreateCaptureArchive(void) {
     if (!NSThread.isMainThread) {
         __block NSURL *url = nil;
@@ -1170,8 +1176,6 @@ static void NGDecoratePlaybackInteraction(UIView *view) {
     }
 }
 
-// Keep the channel and panel implementations in focused includes. The panel include
-// owns comment input/emoji/editor glass and share-sheet glass as one hierarchy pass.
 static id NGObjectProperty(id object, NSString *name) {
     SEL selector = NSSelectorFromString(name);
     Method method = object ? class_getInstanceMethod([object class], selector) : NULL;
@@ -1492,7 +1496,9 @@ static void NGInstallPlaybackGlassHook(void) {
     NGLog(@"playback", @"right-glass-hook-installed", @{@"class": NSStringFromClass(target)});
 }
 
-#include "NGFullscreen.inc"
+#ifdef NG_TEST
+#include "../tests/NGFullscreenFixture.inc"
+#endif
 #include "NGFullscreenPlayback.inc"
 
 static NSArray<NSDictionary *> *NGLiveLayoutControlGroups(void) {
@@ -1990,43 +1996,45 @@ static NSArray<NSArray<NSDictionary *> *> *NGPlaybackVisibilityItems(void) {
 
 #include "NGSupport.inc"
 #include "NGSponsorPrompt.inc"
+#include "NGUsage.inc"
+#include "NGSettingsBackup.inc"
 
 static NSArray<NSDictionary *> *NGSettingsGroups(void) {
-    return @[
-        @{@"title": @"播放布局", @"subtitle": @"元素显隐、位置与播放比例", @"symbol": @"play.rectangle.fill", @"color": UIColor.systemBlueColor, @"rows": @[
-            NGSettingRow(@"显示 / 隐藏播放页元素", @"头像、动作、顶部标签、视频信息", @"eye.slash", nil, @"playbackVisibility"),
-            NGSettingRow(@"位置与大小调节", @"右侧整体、作者名、剧名、简介、声明", @"arrow.up.left.and.arrow.down.right", nil, @"playbackLayout"),
-            NGSettingRow(@"全屏播放", @"去除底部预留黑边；宽屏保留原始大小", @"arrow.up.left.and.arrow.down.right", NGPreferencePlaybackFullscreen, nil)
+    static NSArray *groups; static dispatch_once_t once;
+    dispatch_once(&once,^{ groups=@[
+        @{@"title":@"播放与画面",@"subtitle":@"元素显隐、位置与播放比例",@"symbol":@"rectangle.inset.filled",@"rows":@[
+            NGSettingRow(@"显示 / 隐藏播放页元素",@"头像、动作、顶部标签、视频信息",@"eye.slash",nil,@"playbackVisibility"),
+            NGSettingRow(@"位置与大小调节",@"右侧整体、作者名、剧名、简介、声明",@"arrow.up.left.and.arrow.down.right",nil,@"playbackLayout"),
+            NGSettingRow(@"全屏播放",@"去除底部预留黑边；宽屏保留原始大小",@"arrow.up.left.and.arrow.down.right",NGPreferencePlaybackFullscreen,nil)
         ]},
-        @{@"title": @"图标定制", @"subtitle": @"动作预设、底栏图标与相册图片", @"symbol": @"square.grid.2x2.fill", @"color": UIColor.systemPinkColor, @"rows": @[
-            NGSettingRow(@"右侧动作图标", @"收藏、评论、点赞、分享；支持相册上传", @"paintbrush.pointed", nil, @"playbackIconPresets"),
-            NGSettingRow(@"底栏图标预设与自定义", @"单项上传图片或输入 SF Symbols", @"rectangle.bottomthird.inset.filled", nil, @"dockIcons"),
-            NGSettingRow(@"隐藏底栏项目", @"", @"line.3.horizontal.decrease", nil, @"dockItems")
+        @{@"title":@"底栏设置",@"subtitle":@"外观、收缩、按钮、颜色与图标",@"symbol":@"rectangle.bottomthird.inset.filled",@"rows":@[
+            NGSettingRow(@"底栏外观与收缩",@"清透、居中收缩、头像、按钮功能与震动反馈",@"capsule",nil,@"dockAppearance"),
+            NGSettingRow(@"底栏颜色",@"未选中与已选中",@"circle.lefthalf.filled",nil,@"dockColors"),
+            NGSettingRow(@"底栏图标预设与自定义",@"单项上传图片或输入 SF Symbols",@"square.grid.2x2",nil,@"dockIcons"),
+            NGSettingRow(@"隐藏底栏项目",@"",@"line.3.horizontal.decrease",nil,@"dockItems")
         ]},
-        @{@"title": @"液态外观", @"subtitle": @"玻璃材质、底栏颜色与面板", @"symbol": @"drop.fill", @"color": UIColor.systemTealColor, @"rows": @[
-            NGSettingRow(@"底栏外观与收缩", @"清透、居中收缩、头像、按钮功能与震动反馈", @"rectangle.bottomthird.inset.filled", nil, @"dockAppearance"),
-            NGSettingRow(@"底栏颜色", @"未选中与已选中", @"circle.lefthalf.filled", nil, @"dockColors"),
-            NGSettingRow(@"顶部液态容器", @"频道、合集返回、倍速与更多", @"capsule", NGPreferencePlaybackHeaderGlass, nil),
-            NGSettingRow(@"全集入口悬浮液态", @"观看完整全集入口改为透明悬浮胶囊", @"play.rectangle", NGPreferenceCollectionGlass, nil),
-            NGSettingRow(@"右侧液态按钮", @"", @"circle.grid.2x2", NGPreferencePlaybackGlass, nil),
-            NGSettingRow(@"评论区液态玻璃", @"评论面板与输入框", @"text.bubble", NGPreferenceCommentGlass, nil),
-            NGSettingRow(@"分享、长按与倍速面板", @"清透玻璃、柔雾玻璃", @"square.and.arrow.up", nil, @"shareGlassStyle"),
-            NGSettingRow(@"评论区玻璃透明度", @"滑动调节玻璃底色和文字对比度", @"slider.horizontal.3", nil, @"commentGlassOpacity"),
+        @{@"title":@"玻璃与面板",@"subtitle":@"顶部频道、播放按钮、评论与分享",@"symbol":@"drop.halffull",@"rows":@[
+            NGSettingRow(@"顶部液态容器",@"频道、合集返回、倍速与更多",@"capsule",NGPreferencePlaybackHeaderGlass,nil),
+            NGSettingRow(@"全集入口悬浮液态",@"观看完整全集入口改为透明悬浮胶囊",@"play.rectangle",NGPreferenceCollectionGlass,nil),
+            NGSettingRow(@"右侧液态按钮",@"",@"circle.grid.2x2",NGPreferencePlaybackGlass,nil),
+            NGSettingRow(@"评论区液态玻璃",@"评论面板与输入框",@"text.bubble",NGPreferenceCommentGlass,nil),
+            NGSettingRow(@"分享、长按与倍速面板",@"清透玻璃、柔雾玻璃",@"square.and.arrow.up",nil,@"shareGlassStyle"),
+            NGSettingRow(@"评论区玻璃透明度",@"玻璃底色与文字对比度",@"slider.horizontal.3",nil,@"commentGlassOpacity")
         ]},
-        @{@"title": @"工具与诊断", @"subtitle": @"页面结构、音频专项与问题采集", @"symbol": @"wrench.and.screwdriver.fill", @"color": UIColor.systemOrangeColor, @"rows": @[
-            NGSettingRow(@"调试工具", @"显示扳手入口；音频采集需开启后重启红果", @"wrench.fill", NGPreferenceHUD, nil),
-            NGSettingRow(@"调试导出菜单", @"本页 ZIP / 音频专项 ZIP，分享前请检查隐私", @"square.and.arrow.up", nil, @"capture"),
-            NGSettingRow(@"清除记录", @"", @"trash", nil, @"clearEvents")
+        @{@"title":@"图标与文字",@"subtitle":@"播放动作图标、字体与字号",@"symbol":@"textformat.size",@"rows":@[
+            NGSettingRow(@"右侧动作图标",@"收藏、评论、点赞、分享；支持相册上传",@"paintbrush.pointed",nil,@"playbackIconPresets"),
+            NGSettingRow(@"全局字号与自定义字体",@"比例调节、已安装字体和字体文件导入",@"textformat",nil,@"typography")
         ]},
-        @{@"title": @"字体与字号", @"subtitle": @"原生文字缩放与自定义字体", @"symbol": @"textformat", @"color": UIColor.systemPurpleColor, @"rows": @[
-            NGSettingRow(@"全局字号与自定义字体", @"比例调节、已安装字体和字体文件导入", @"textformat.size", nil, @"typography")
+        @{@"title":@"备份与数据",@"subtitle":@"导出设置、恢复备份与使用统计",@"symbol":@"externaldrive",@"rows":@[
+            NGSettingRow(@"备份与恢复设置",@"保存到文件或从文件恢复",@"arrow.triangle.2.circlepath",nil,@"settingsBackup"),
+            NGSettingRow(@"使用统计与隐私",@"自动统计与数据说明",@"chart.bar",nil,@"usagePrivacy")
         ]},
-
-    ];
-}
-
-static UIImage *NGSettingsTile(NSString *symbol, UIColor *color) {
-    return NGSettingsIcon([UIImage systemImageNamed:symbol],color,36);
+        @{@"title":@"工具与诊断",@"subtitle":@"页面结构、音频专项与问题采集",@"symbol":@"waveform.path.ecg",@"rows":@[
+            NGSettingRow(@"调试工具",@"显示扳手入口；音频采集需开启后重启红果",@"wrench",NGPreferenceHUD,nil),
+            NGSettingRow(@"调试导出菜单",@"本页 ZIP / 音频专项 ZIP，分享前请检查隐私",@"square.and.arrow.up",nil,@"capture"),
+            NGSettingRow(@"清除记录",@"",@"trash",nil,@"clearEvents")
+        ]}
+    ]; }); return groups;
 }
 
 @interface NGBrandHeaderView : UIView
@@ -2071,7 +2079,7 @@ static UIImage *NGSettingsTile(NSString *symbol, UIColor *color) {
 }
 - (void)layoutSubviews {
     [super layoutSubviews]; _surface.frame=CGRectInset(self.contentView.bounds,0,1); CGFloat w=_surface.bounds.size.width,h=_surface.bounds.size.height;
-    _tile.frame=CGRectMake(14,(h-36)/2,36,36); CGFloat left=64, textWidth=MAX(0,w-left-32);
+    _tile.frame=CGRectMake(16,(h-23)/2,23,23); CGFloat left=53, textWidth=MAX(0,w-left-32);
     CGSize heading=[_heading sizeThatFits:CGSizeMake(textWidth,60)],summary=[_summary sizeThatFits:CGSizeMake(textWidth,80)]; CGFloat total=heading.height+4+summary.height;
     _heading.frame=CGRectMake(left,(h-total)/2,textWidth,heading.height); _summary.frame=CGRectMake(left,CGRectGetMaxY(_heading.frame)+4,textWidth,summary.height);
     _chevron.frame=CGRectMake(w-23,(h-12)/2,7,12);
@@ -2085,6 +2093,8 @@ static UIImage *NGSettingsTile(NSString *symbol, UIColor *color) {
 
 // Keep normal navigation and search results on the same destination map.
 static UIViewController *NGSettingsDestinationForAction(NSString *action) {
+    if ([action isEqualToString:@"settingsBackup"]) return [NGSettingsBackupController new];
+    if ([action isEqualToString:@"usagePrivacy"]) return [NGUsageSettingsController new];
     if ([action isEqualToString:@"dockAppearance"]) return [NGDockAppearanceSettingsController new];
     if ([action isEqualToString:@"typography"]) return [NGTypographyController new];
     if ([action isEqualToString:@"sponsor"]) return [NGSupportViewController new];
@@ -2153,6 +2163,17 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
 #if NG_TEST
     if (!NGSponsorTestPrompts) return;
 #endif
+    if (!self.view.window || self.navigationController.topViewController!=self || self.presentedViewController || self.isBeingDismissed || self.navigationController.isBeingDismissed) return;
+    BOOL showNotice=![NSUserDefaults.standardUserDefaults boolForKey:NGUsageNoticeShown];
+#if NG_TEST
+    showNotice &= NGUsageTestNotices;
+#endif
+    if (showNotice) {
+        UIAlertController *notice=[UIAlertController alertControllerWithTitle:@"使用统计说明" message:@"奶蛙会自动向作者服务器发送红果 ID、红果版本、奶蛙版本、iOS 版本及随机安装编号，用于使用人数和版本统计。不读取登录凭据、观看内容或联系方式。详细说明在‘备份与数据 → 使用统计与隐私’。" preferredStyle:UIAlertControllerStyleAlert];
+        __weak typeof(self) weakSelf=self;
+        [notice addAction:[UIAlertAction actionWithTitle:@"我知道了" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action){[NSUserDefaults.standardUserDefaults setBool:YES forKey:NGUsageNoticeShown];dispatch_after(dispatch_time(DISPATCH_TIME_NOW,.4*NSEC_PER_SEC),dispatch_get_main_queue(),^{[weakSelf showSponsorPromptIfNeeded];});}]];
+        [self presentViewController:notice animated:YES completion:nil];return;
+    }
     if (self.sponsorPromptConsidered || [NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceSponsorNever] || !self.view.window || self.navigationController.topViewController!=self || self.presentedViewController) return;
     self.sponsorPromptConsidered=YES; [self presentViewController:[NGSponsorPromptController new] animated:YES completion:nil];
 }
@@ -2267,25 +2288,24 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
 - (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section { return 3; }
 - (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section { return [self isSearching] && !self.searchResults.count ? UITableViewAutomaticDimension : 3; }
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
-    cell.detailTextLabel.numberOfLines = 2;
-    cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
     if ([self isSearching]) {
+        UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
+        cell.detailTextLabel.numberOfLines = 2;
+        cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
         NSDictionary *match = self.searchResults[indexPath.row];
         NSDictionary *row = match[@"row"];
         cell.textLabel.text = row[@"title"];
         cell.detailTextLabel.text = [NSString stringWithFormat:@"%@ · %@", match[@"groupTitle"], row[@"subtitle"]];
-        cell.imageView.image = NGSettingsIcon([UIImage systemImageNamed:row[@"symbol"] ?: @"gear"],self.groups[[match[@"group"] unsignedIntegerValue]][@"color"],30);
+        cell.imageView.image = NGSettingsIcon([UIImage systemImageNamed:row[@"symbol"] ?: @"gear"],23);
         return cell;
     }
     NSUInteger groupIndex = indexPath.section;
     NSDictionary *group = self.groups[groupIndex];
-    UIColor *color = group[@"color"] ?: UIColor.systemBlueColor;
-    NGSettingsCategoryCell *category = [[NGSettingsCategoryCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+    NGSettingsCategoryCell *category = [tableView dequeueReusableCellWithIdentifier:@"category"] ?: [[NGSettingsCategoryCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"category"];
     category.heading.text = group[@"title"];
     category.summary.text = group[@"subtitle"];
-    category.tile.image = NGSettingsTile(group[@"symbol"] ?: @"gear", color);
-    category.tile.tintColor = color;
+    category.tile.image = NGSettingsIcon([UIImage systemImageNamed:group[@"symbol"] ?: @"gear"],23);
+    category.tile.tintColor = NGSettingsInk();
     category.accessibilityLabel = [NSString stringWithFormat:@"%@，%@", group[@"title"], group[@"subtitle"]];
     category.accessibilityIdentifier = [NSString stringWithFormat:@"NaiwaGuo.Settings.Group.%lu", (unsigned long)indexPath.section];
     return category;
@@ -2376,7 +2396,7 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
     cell.textLabel.text = row[@"title"];
     cell.detailTextLabel.text = row[@"subtitle"];
     cell.detailTextLabel.numberOfLines = 0;
-    cell.imageView.image = NGSettingsIcon([UIImage systemImageNamed:row[@"symbol"] ?: @"gear"],self.group[@"color"],30);
+    cell.imageView.image = NGSettingsIcon([UIImage systemImageNamed:row[@"symbol"] ?: @"gear"],23);
     NSString *key = row[@"key"];
     NSString *action = row[@"action"];
     if ([action isEqualToString:@"clearEvents"]) {
@@ -2413,8 +2433,6 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
 - (void)settingChanged:(UISwitch *)sender {
     NSString *key = sender.accessibilityIdentifier;
     [NSUserDefaults.standardUserDefaults setBool:sender.on forKey:key];
-    NGPrepareRuntimeGlass();
-    NGUpdateDock();
     if ([key isEqualToString:NGPreferenceHUD]) {
         NGDAudioProbePreferenceDidChange(); NGInstallOverlay();
     } else if ([key isEqualToString:NGPreferencePerformance]) {
@@ -2495,6 +2513,7 @@ static void NGInstallLifecycleHooks(void) {
         }));
         [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidBecomeActiveNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
             NGLog(@"lifecycle", @"foreground", nil);
+            NGUsageForeground();
             [NGPerformanceRecorder.shared resume];
             NGInstallOverlay();
             
@@ -2579,7 +2598,7 @@ static void NGStart(void) {
 #endif
     NGDAudioHooksInstall(); NGDDebugInspectorInstall(); NGDRegisterFLEXKingProvider();
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.7 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        NGInstallOverlay();
+        NGInstallOverlay(); NGUsageForeground();
         
         NGInstallPlaybackGlassHook();
         NGUpdatePlaybackGlass();

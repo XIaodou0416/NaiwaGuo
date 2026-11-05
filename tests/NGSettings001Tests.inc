@@ -14,9 +14,9 @@
 @end
 static NSDictionary *NGTestSettings001(void) {
     NSMutableDictionary *checks = [NSMutableDictionary dictionary];
-    NSArray *groups = NGSettingsGroups(); NSArray *rows = groups.lastObject[@"rows"];
-    checks[@"versionStartsAt001"] = @([NGVersion isEqualToString:@"0.0.9"]);
-    checks[@"fiveGroupsWithoutAuthorCategory"] = @(groups.count == 5 && rows.count == 1 && ![[groups valueForKey:@"title"] containsObject:@"作者与交流"]);
+    NSArray *groups = NGSettingsGroups();
+    checks[@"currentVersion"] = @([NGVersion isEqualToString:@"0.1.0"]);
+    checks[@"sixGroupsWithoutAuthorCategory"] = @(groups.count == 6 && ![[groups valueForKey:@"title"] containsObject:@"作者与交流"]);
     NSArray *actions = @[@"qqGroup",@"tgNews",@"tgChat"];
     NSArray *links = @[@"https://qm.qq.com/q/w9rb2DnAoE",@"https://t.me/beans0416",@"https://t.me/beans1011"];
     NSMutableArray *opened = [NSMutableArray array];
@@ -102,9 +102,9 @@ static NSDictionary *NGTestSettings001(void) {
     checks[@"sameOpenPageFollowsSystemTheme"] = @(![light isEqual:dark] && home.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark);
     window.overrideUserInterfaceStyle = UIUserInterfaceStyleLight; [window setNeedsLayout]; [window layoutIfNeeded]; [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.06]]; [nav.view layoutIfNeeded];
     checks[@"switchBackToLightWorks"] = @([[home.tableView.backgroundColor resolvedColorWithTraitCollection:home.traitCollection] isEqual:light]);
-    checks[@"newAdaptiveHeroAndVersionBadge"] = @([home.brandHeader.badgeLabel.text isEqualToString:@"v0.0.9"] && home.tableView.backgroundView == nil && home.brandHeader.bounds.size.height <= 100);
+    checks[@"newAdaptiveHeroAndVersionBadge"] = @([home.brandHeader.badgeLabel.text isEqualToString:@"v0.1.0"] && home.tableView.backgroundView == nil && home.brandHeader.bounds.size.height <= 100);
     BOOL cardLayout = YES;
-    for (NSUInteger i=0;i<5;i++) {
+    for (NSUInteger i=0;i<groups.count;i++) {
         NSIndexPath *path = [NSIndexPath indexPathForRow:0 inSection:i]; NGSettingsCategoryCell *cell = (id)[home tableView:home.tableView cellForRowAtIndexPath:path];
         cell.frame = CGRectMake(0,0,280,64); [cell setNeedsLayout]; [cell layoutIfNeeded];
         cardLayout &= CGRectGetMaxX(cell.summary.frame)<=CGRectGetMinX(cell.chevron.frame) && CGRectGetMaxY(cell.summary.frame)<=cell.surface.bounds.size.height && cell.tile.image != nil && cell.surface.layer.cornerRadius == 14;

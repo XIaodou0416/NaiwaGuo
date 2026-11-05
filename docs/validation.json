@@ -1,5 +1,5 @@
 {
-  "version": "0.0.9",
+  "version": "0.1.0",
   "displayName": "奶蛙",
   "date": "2026-11-05",
   "releaseStatus": "private candidate; no public GitHub Release",
@@ -15,7 +15,7 @@
     "(undefined) weak external _OBJC_CLASS_$_UIGlassEffect (from UIKit)"
   ],
   "fullRegressionPassed": true,
-  "regressionSections": 48,
+  "regressionSections": 49,
   "featureAssertions": {
     "dockColors005": {
       "allThreeModesRetainNormalAndSelectedPixels": true,
@@ -129,7 +129,7 @@
     },
     "settings009": {
       "allCategoriesAvailableWithoutHostLogin": true,
-      "categoryIconsHaveFixedColoredTiles": true,
+      "categoryIconsAreMonochromeSymbols": true,
       "chineseDisplayName": true,
       "detailRowIconUsesNewStyle": true,
       "eachCategoryIconIsDistinct": 1,
@@ -137,6 +137,20 @@
       "nativeEntryHasTextOnly": true,
       "noAuthorizationBanner": 1,
       "savedPreferencesReadWithoutMasking": true
+    },
+    "settingsData010": {
+      "accentIsBlackAndWhite": true,
+      "accountAdapterHandlesLoginLogoutAndInvalidID": true,
+      "automaticStatisticsHasNoUserSwitch": true,
+      "backupAndPrivacyDestinationsExist": true,
+      "backupExcludesAccountsNoticeAndInstallationSecrets": true,
+      "backupRoundTripIncludingCustomImages": true,
+      "classificationCachedAcrossRepeatedReads": true,
+      "diagnosticsExcludeServiceSecrets": true,
+      "invalidBackupsRejectedBeforeMutation": 1,
+      "restorePreservesHostAndStatisticsNotice": true,
+      "restoreReplacesOnlyPluginSettings": true,
+      "usagePayloadHasOnlyDeclaredFields": true
     }
   },
   "searchNavigationCases": {
@@ -213,7 +227,7 @@
       "searchActiveAfter": false,
       "correctGroupAndVisibleHighlight": true,
       "externalOpens": 0,
-      "title": "播放布局",
+      "title": "播放与画面",
       "activeSearchAtSelection": true,
       "emptyFooterFits": true,
       "tapState": {
@@ -300,10 +314,10 @@
   "nativeUICases": {
     "font": {
       "passed": 1,
-      "durationSeconds": 4.800797333329683,
+      "durationSeconds": 4.800643624999793,
       "profileSettingsFontNavigationCycles": 10,
       "mainThreadHeartbeats": 40,
-      "maxHeartbeatGapSeconds": 0.12188612500904128
+      "maxHeartbeatGapSeconds": 0.12104054164956324
     },
     "regular": {
       "collapseSide": 0,
@@ -581,6 +595,41 @@
       "featuresAvailableAfterRestartWithoutLogin": true
     }
   },
+  "automaticUsageHTTPS": {
+    "passed": 1,
+    "syntheticInstallationDeletedAfterTest": true,
+    "syntheticAccountOnly": true,
+    "automaticHTTPSUsageWithoutSwitchAccepted": true
+  },
+  "backendUnitTestsPassed": 5,
+  "backendAndExistingNaiwaHTTPTestsPassed": 20,
+  "backendDeployment": {
+    "version": "0.1.0",
+    "naiwaServiceActive": true,
+    "existingContentEndpointPreserved": true,
+    "adminStatisticsAssetServed": true,
+    "rollbackBackup": "/opt/naiwa-releases/guo-0.1.0-20261105T110815Z",
+    "database": "/var/lib/naiwa/guo.sqlite3",
+    "serverSHA256": "1ff25b1bab9a0ca1c80fd6b4cc74521287953c5dfd62ac900c56d3ce4a94ac07",
+    "moduleSHA256": "5f6db415260381161ff651697c411900b77f31f6e4d420d2658cc76ead4eab07"
+  },
+  "publicHTTPSChecks": {
+    "httpsCertificateVerified": true,
+    "usageAndDedupRequestsAccepted": true,
+    "adminRequiresExistingLogin": true,
+    "wrongInstallationSecretRejected": true,
+    "syntheticInstallationDeleted": true,
+    "adminStatisticsTabServed": true
+  },
+  "adminBrowserChecks": {
+    "passed": true,
+    "productionAssetsUsed": true,
+    "apiData": "synthetic fixtures intercepted locally; no real user data read",
+    "desktopAndMobileScreenshots": true,
+    "tabNavigation": true,
+    "emptySearch": true,
+    "uncaughtBrowserErrors": []
+  },
   "followGateCodeRemoved": true,
   "avatarAnimationEndMeasurements": {
     "avatar60": {
@@ -631,35 +680,7 @@
   },
   "commentShare005InterventionReverted": true,
   "legacyFallbackForcedOnModernSimulator": true,
-  "supportAndCommunityChecks": {
-    "allFiveCardsFitNarrowScreen": true,
-    "allThreeOriginalURLsExact": true,
-    "codePreservesAspectAndWhiteQuietZone": 1,
-    "communityEntryOpensInvitationPage": 1,
-    "compactAndLandscapeFooterLayout": true,
-    "compactAndLandscapeInvitationLayout": true,
-    "compactAndLandscapeSupportLayout": true,
-    "compactHomeRowAndHero": 1,
-    "eachInvitationCardOpensItsURL": true,
-    "embeddedCodeDecodesAtOriginalSize": 1,
-    "fiveGroupsWithoutAuthorCategory": 1,
-    "invitationGlassAndPressFeedback": true,
-    "newAdaptiveHeroAndVersionBadge": 1,
-    "openFailureOffersCopyLink": 1,
-    "reduceMotionSkipsSheenAndEntrance": 1,
-    "sameOpenPageFollowsSystemTheme": 1,
-    "shareSheetExcludesPhotoLibraryWrite": 1,
-    "sponsorAndAllGroupsAreSearchable": true,
-    "sponsorFooterOpensSupportPage": true,
-    "sponsorUsesRegularGlassCard": true,
-    "supportBackReturnsToSettings": 1,
-    "switchBackToLightWorks": true,
-    "themeNeverForcedBySettings": 1,
-    "twoVerticalGlassFooterButtons": 1,
-    "unknownActionDoesNotOpen": 1,
-    "versionStartsAt001": true
-  },
-  "settingsScreenshots": 21,
+  "settingsScreenshots": 24,
   "privateSourcePathAndSecretScanPassed": true,
   "physicalDeviceTested": false,
   "lowerIOSRuntimeTested": false,

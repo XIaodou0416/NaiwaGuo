@@ -116,6 +116,7 @@ result = json.loads((root / 'result.json').read_text())
 assert all(result['nativeSettings'].values()), result['nativeSettings']
 assert all(result['dock'].values()), result['dock']
 assert all(result['settings009'].values()), result['settings009']
+assert all(result['settingsData010'].values()), result['settingsData010']
 for feature in ['episodeToolbar', 'dockColors', 'statusBarRouting', 'morePanelGlass', 'dramaTitle', 'shareIconReuse', 'thumbnailRepaint', 'dockAspectAndPreview', 'openingAnimation', 'settings001', 'corners002', 'shareRepaint002', 'typography002', 'search002', 'typography003', 'corners003', 'iconStates003', 'dock003', 'dockSurface006', 'dockAvatarAndInk006', 'legacyDock006', 'danmaku007', 'sponsorPrompt007', 'dockColors005', 'dockActions005', 'fullscreenTransitions005', 'speedGlass005', 'dockHaptics005', 'fullscreenPlayback', 'collection075', 'review075', 'underlay075', 'settings075', 'backdrop075']:
     assert all(result[feature].values()), result[feature]
 assert all(result['playbackPresets'].values()), result['playbackPresets']
@@ -141,7 +142,7 @@ assert result['viewCount'] >= 4
 assert result['windowCount'] >= 1
 assert result['eventCount'] > 0
 assert result['performanceSamples'] >= 1
-assert result['settingsGroups'] == 5
+assert result['settingsGroups'] == 6
 assert result['playbackGlassCount'] == 5
 assert result['labelsOutsideGlass']
 assert result['compatibilityDiskUnchanged']

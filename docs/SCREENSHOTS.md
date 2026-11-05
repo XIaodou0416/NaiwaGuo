@@ -1,6 +1,6 @@
 # 功能界面截图
 
-顶部使用宿主红果原图标，功能入口按类别配色。以下均为 0.0.9 模拟器实际运行界面；底栏背景是合成内容。真机效果等待作者提供，届时单独记录机型与版本。
+顶部使用宿主红果原图标，功能入口使用单色线性图标。以下均为 0.1.0 模拟器实际运行界面；底栏背景是合成内容。真机效果等待作者提供，届时单独记录机型与版本。
 
 | 普通液态 | 清透液态 |
 | --- | --- |
@@ -46,6 +46,14 @@
 
 | 奶蛙功能列表 | 纯文字设置入口 |
 | --- | --- |
-| <img src="previews/settings-unrestricted009.png" width="290" alt="奶蛙新版彩色功能图标" /> | <img src="previews/native-entry009.png" width="290" alt="只有奶蛙文字的设置入口" /> |
+| <img src="previews/settings-unrestricted009.png" width="290" alt="奶蛙单色功能分类" /> | <img src="previews/native-entry009.png" width="290" alt="只有奶蛙文字的设置入口" /> |
 
 <img src="previews/sponsor-prompt009.png" width="290" alt="赞助提示和两个关闭选项" />
+
+## 备份与数据
+
+| 文件备份与恢复 | 自动使用统计 |
+| --- | --- |
+| <img src="previews/backup.png" width="290" alt="文件备份与恢复" /> | <img src="previews/privacy.png" width="290" alt="自动统计与数据说明" /> |
+
+<img src="previews/privacy-dark.png" width="290" alt="深色统计设置" />

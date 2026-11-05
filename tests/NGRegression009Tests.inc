@@ -9,7 +9,7 @@ static NSDictionary *NGTestSettings009(void) {
     for (NSUInteger index=0;index<home.groups.count;index++) {
         NGSettingsCategoryCell *cell=(id)[home tableView:home.tableView cellForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:index]];
         available &= cell.userInteractionEnabled && cell.contentView.alpha==1;
-        tiles &= cell.tile.image.renderingMode==UIImageRenderingModeAlwaysOriginal && CGSizeEqualToSize(cell.tile.image.size,CGSizeMake(36,36));
+        tiles &= cell.tile.image.renderingMode==UIImageRenderingModeAlwaysTemplate && cell.tile.image.size.height<=30;
         if (cell.tile.image) [icons addObject:UIImagePNGRepresentation(cell.tile.image)];
     }
     [home tableView:home.tableView didSelectRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
@@ -17,14 +17,14 @@ static NSDictionary *NGTestSettings009(void) {
     BOOL navigation=[detail isKindOfClass:NGSettingsGroupViewController.class];
     UITableViewCell *row=[detail tableView:detail.tableView cellForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
     [detail tableView:detail.tableView willDisplayCell:row forRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
-    BOOL detailIcon=row.imageView.image.renderingMode==UIImageRenderingModeAlwaysOriginal && CGSizeEqualToSize(row.imageView.image.size,CGSizeMake(30,30));
+    BOOL detailIcon=row.imageView.image.renderingMode==UIImageRenderingModeAlwaysTemplate && CGColorEqualToColor([row.imageView.tintColor resolvedColorWithTraitCollection:home.traitCollection].CGColor,[NGSettingsInk() resolvedColorWithTraitCollection:home.traitCollection].CGColor);
     NGInstallNativeSettings(); SSSettingViewController *host=[SSSettingViewController new]; [host loadViewIfNeeded];
     NGNativeEntry *entry=nil; for (UIView *view in host.tableView.tableHeaderView.subviews) if ([view isKindOfClass:NGNativeEntry.class]) entry=(id)view;
     BOOL name=[NGPluginName isEqual:@"奶蛙"] && [home.brandHeader.titleLabel.text isEqual:@"奶蛙"];
     BOOL native=entry && [entry.configuration.title isEqual:@"奶蛙"] && !entry.configuration.image && !entry.currentImage;
     BOOL preferences=[defaults boolForKey:NGPreferenceDock] && fabs([defaults doubleForKey:NGPreferenceFontScale]-.7)<.001;
     NGRestorePreferences005(saved);
-    return @{@"allCategoriesAvailableWithoutHostLogin":@(available),@"categoryIconsHaveFixedColoredTiles":@(tiles),@"eachCategoryIconIsDistinct":@(icons.count==home.groups.count),@"detailRowIconUsesNewStyle":@(detailIcon),@"featureNavigationAvailable":@(navigation),@"chineseDisplayName":@(name),@"nativeEntryHasTextOnly":@(native),@"savedPreferencesReadWithoutMasking":@(preferences),@"noAuthorizationBanner":@(home.tableView.tableHeaderView==home.brandHeader)};
+    return @{@"allCategoriesAvailableWithoutHostLogin":@(available),@"categoryIconsAreMonochromeSymbols":@(tiles),@"eachCategoryIconIsDistinct":@(icons.count==home.groups.count),@"detailRowIconUsesNewStyle":@(detailIcon),@"featureNavigationAvailable":@(navigation),@"chineseDisplayName":@(name),@"nativeEntryHasTextOnly":@(native),@"savedPreferencesReadWithoutMasking":@(preferences),@"noAuthorizationBanner":@(home.tableView.tableHeaderView==home.brandHeader)};
 }
 
 static void NGRunSettingsUI009(UIWindow *window,NSString *mode) {

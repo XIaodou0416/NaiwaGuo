@@ -5,29 +5,21 @@ static UIColor *NGSettingsColor(CGFloat r, CGFloat g, CGFloat b, CGFloat dr, CGF
         return [UIColor colorWithRed:(dark ? dr : r)/255.0 green:(dark ? dg : g)/255.0 blue:(dark ? db : b)/255.0 alpha:1];
     }];
 }
-static UIColor *NGSettingsAccent(void) { return NGSettingsColor(99,110,31,216,234,140); }
+static UIColor *NGSettingsAccent(void) { return UIColor.labelColor; }
 static UIColor *NGSettingsCanvas(void) { return NGSettingsColor(246,247,247,18,19,21); }
 static UIColor *NGSettingsSurface(void) { return NGSettingsColor(255,255,255,29,30,33); }
 static UIColor *NGSettingsInk(void) { return NGSettingsColor(31,33,34,242,242,242); }
 static UIColor *NGSettingsMuted(void) { return NGSettingsColor(117,120,122,162,165,168); }
-static UIColor *NGSettingsLine(void) { return NGSettingsColor(225,230,206,66,75,47); }
+static UIColor *NGSettingsLine(void) { return UIColor.separatorColor; }
 static UIFont *NGSettingsFont(CGFloat size, UIFontWeight weight) {
     return [[UIFontMetrics metricsForTextStyle:UIFontTextStyleBody] scaledFontForFont:[UIFont systemFontOfSize:size weight:weight] maximumPointSize:size * 1.45];
 }
 static void NGSettingsFeedback(void) { [[[UISelectionFeedbackGenerator alloc] init] selectionChanged]; }
 
-static UIImage *NGSettingsIcon(UIImage *symbol,UIColor *color,CGFloat side) {
+static UIImage *NGSettingsIcon(UIImage *symbol,CGFloat side) {
     if (!symbol) return nil;
-    UIColor *fill=color ?: UIColor.systemBlueColor;
-    UIImageSymbolConfiguration *configuration=[UIImageSymbolConfiguration configurationWithPointSize:side*.54 weight:UIImageSymbolWeightSemibold];
-    UIImage *glyph=[[symbol imageByApplyingSymbolConfiguration:configuration] imageWithTintColor:UIColor.whiteColor renderingMode:UIImageRenderingModeAlwaysOriginal];
-    UIGraphicsImageRenderer *renderer=[[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(side,side)];
-    UIImage *image=[renderer imageWithActions:^(UIGraphicsImageRendererContext *context){
-        [fill setFill]; [[UIBezierPath bezierPathWithRoundedRect:CGRectMake(0,0,side,side) cornerRadius:8] fill];
-        CGFloat scale=MIN(side*.58/MAX(1,glyph.size.width),side*.58/MAX(1,glyph.size.height)); CGSize size=CGSizeMake(glyph.size.width*scale,glyph.size.height*scale);
-        [glyph drawInRect:CGRectMake((side-size.width)/2,(side-size.height)/2,size.width,size.height)];
-    }];
-    return [image imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+    UIImageSymbolConfiguration *configuration=[UIImageSymbolConfiguration configurationWithPointSize:MIN(side,23) weight:UIImageSymbolWeightRegular];
+    return [[symbol imageByApplyingSymbolConfiguration:configuration] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 }
 
 #if NG_TEST
@@ -131,15 +123,15 @@ static BOOL NGSettingsMotionEnabled(void) {
 }
 - (void)viewDidAppear:(BOOL)animated { [super viewDidAppear:animated]; self.entranceRunning = NO; }
 - (void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)path {
-    if ([cell.accessibilityIdentifier hasPrefix:@"NaiwaGuo.Settings.Group."]) { cell.backgroundConfiguration = [UIBackgroundConfiguration clearConfiguration]; return; }
+    if ([cell.accessibilityIdentifier hasPrefix:@"NaiwaGuo.Settings.Group."]) { cell.backgroundConfiguration = [UIBackgroundConfiguration clearConfiguration]; cell.imageView.tintColor=NGSettingsInk(); return; }
     cell.textLabel.font = NGSettingsFont(15,UIFontWeightMedium); cell.textLabel.adjustsFontForContentSizeCategory = YES; cell.textLabel.numberOfLines = 0;
     cell.detailTextLabel.font = NGSettingsFont(12,UIFontWeightRegular); cell.detailTextLabel.textColor = NGSettingsMuted(); cell.detailTextLabel.numberOfLines = 0;
-    if (cell.imageView.image.isSymbolImage && cell.imageView.image.renderingMode!=UIImageRenderingModeAlwaysOriginal) cell.imageView.image=NGSettingsIcon(cell.imageView.image,cell.imageView.tintColor,30);
+    cell.imageView.tintColor=NGSettingsInk();
     cell.layoutMargins = UIEdgeInsetsMake(12,16,12,16); cell.tintColor = NGSettingsAccent();
     UIBackgroundConfiguration *background = [UIBackgroundConfiguration listGroupedCellConfiguration];
     background.backgroundColor = NGSettingsSurface(); background.cornerRadius = 16;
     cell.backgroundConfiguration = background;
-    if ([cell.accessoryView isKindOfClass:UISwitch.class]) ((UISwitch *)cell.accessoryView).onTintColor = NGSettingsAccent();
+    if ([cell.accessoryView isKindOfClass:UISwitch.class]) { ((UISwitch *)cell.accessoryView).onTintColor = NGSettingsAccent(); ((UISwitch *)cell.accessoryView).thumbTintColor=UIColor.systemBackgroundColor; }
 }
 - (void)tableView:(UITableView *)tableView willDisplayHeaderView:(UIView *)view forSection:(NSInteger)section {
     if (![view isKindOfClass:UITableViewHeaderFooterView.class]) return;
