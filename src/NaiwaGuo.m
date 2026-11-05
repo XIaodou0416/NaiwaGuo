@@ -18,7 +18,7 @@ void NGDRegisterFLEXKingProvider(void);
 #import <math.h>
 
 static NSString *const NGPluginName = @"NaiwaGuo";
-static NSString *const NGVersion = @"0.0.4";
+static NSString *const NGVersion = @"0.0.5";
 static NSString *const NGHostBundleIdentifier = @"com.phoenix.video";
 static NSString *const NGHostExecutable = @"Eggplant";
 static NSString *const NGPrefix = @"com.naiwaguo.";
@@ -28,7 +28,6 @@ static NSString *const NGPreferencePlaybackGlass = @"com.naiwaguo.playback.right
 static NSString *const NGPreferenceCommentGlass = @"com.naiwaguo.playback.commentGlass";
 static NSString *const NGPreferenceCommentGlassOpacity = @"com.naiwaguo.playback.commentGlassOpacity";
 static NSString *const NGPreferenceShareGlass = @"com.naiwaguo.playback.shareGlass";
-static NSString *const NGPreferenceHideStatusBar = @"com.naiwaguo.playback.hideStatus";
 static NSString *const NGPreferencePlaybackFullscreen = @"com.naiwaguo.playback.fullscreen";
 static NSString *const NGPreferencePlaybackHeaderGlass = @"com.naiwaguo.playback.headerGlass";
 static NSString *const NGPreferenceChannelRestoreMigration = @"com.naiwaguo.migration.restoreChannels.070";
@@ -40,6 +39,10 @@ static BOOL NGRuntimeGlassHooksInstalled;
 static NSDictionary *NGOriginalHostInfo;
 
 static void NGPrepareRuntimeGlass(void) {
+    if (!NGOriginalHostInfo) NGOriginalHostInfo = [NSBundle.mainBundle.infoDictionary copy];
+    // Compatibility is automatic only on systems with native Liquid Glass.
+    // Individual plugin features still default to off and keep their own switches.
+    if (@available(iOS 26.0, *)) {} else return;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         NSBundle *host = NSBundle.mainBundle;
@@ -47,7 +50,7 @@ static void NGPrepareRuntimeGlass(void) {
         if (![host.bundleIdentifier isEqualToString:NGHostBundleIdentifier] &&
             ![originalInfo[@"CFBundleExecutable"] isEqualToString:NGHostExecutable]) return;
         NGOriginalHostInfo = [originalInfo copy];
-        NGRuntimeGlassRequested = YES; // Always enabled; obsolete saved switches are ignored.
+        NGRuntimeGlassRequested = YES;
 
         // Override only main-bundle lookups. UIKit may already have cached the original value.
         NSMutableDictionary *replacement = [originalInfo mutableCopy];
@@ -1723,7 +1726,6 @@ static void NGDismissLivePreview(void) {
     NGLivePreviewWindow = nil;
     window.hidden = YES;
     [NGBaseWindow() makeKeyWindow];
-    NGUpdatePlaybackStatusBar();
 }
 
 static void NGPresentLivePreview(void) {
@@ -1749,13 +1751,13 @@ static void NGOpenSettings(void) {
     NGDismissLivePreview();
     UIViewController *presenter = NGTopController();
     while (presenter.presentedViewController) presenter = presenter.presentedViewController;
-    if ([NGClassName(presenter) hasPrefix:@"NGSettings"]) return;
     if (presenter.transitionCoordinator.isAnimated) {
         BOOL accepted = [presenter.transitionCoordinator animateAlongsideTransition:nil completion:^(id<UIViewControllerTransitionCoordinatorContext> context) {
             dispatch_async(dispatch_get_main_queue(), ^{ NGOpenSettings(); });
         }];
         if (accepted) return;
     }
+    if ([NGClassName(presenter) hasPrefix:@"NGSettings"]) return;
     if (presenter.isBeingPresented || presenter.isBeingDismissed) return;
     if ([presenter isKindOfClass:NGSettingsViewController.class] || [presenter isKindOfClass:UINavigationController.class]) {
         if ([presenter isKindOfClass:UINavigationController.class] && [((UINavigationController *)presenter).topViewController isKindOfClass:NGSettingsViewController.class]) return;
@@ -1875,6 +1877,7 @@ static NSArray<NSArray<NSDictionary *> *> *NGPlaybackVisibilityItems(void) {
 - (void)itemChanged:(UISwitch *)sender {
     NSString *key = [@"com.naiwaguo.playback.hidden." stringByAppendingString:sender.accessibilityIdentifier ?: @""];
     [NSUserDefaults.standardUserDefaults setBool:sender.on forKey:key];
+    NGPrepareRuntimeGlass();
     NGUpdatePlaybackGlass(); NGUpdatePlaybackHeaderGlass(); NGUpdatePlaybackTextLayout();
 }
 @end
@@ -1986,11 +1989,10 @@ static NSArray<NSArray<NSDictionary *> *> *NGPlaybackVisibilityItems(void) {
 
 static NSArray<NSDictionary *> *NGSettingsGroups(void) {
     return @[
-        @{@"title": @"播放布局", @"subtitle": @"元素显隐、位置与系统状态栏", @"symbol": @"rectangle.inset.filled", @"color": UIColor.systemIndigoColor, @"rows": @[
+        @{@"title": @"播放布局", @"subtitle": @"元素显隐、位置与播放比例", @"symbol": @"rectangle.inset.filled", @"color": UIColor.systemIndigoColor, @"rows": @[
             NGSettingRow(@"显示 / 隐藏播放页元素", @"头像、动作、顶部标签、视频信息", @"eye.slash", nil, @"playbackVisibility"),
             NGSettingRow(@"位置与大小调节", @"右侧整体、作者名、剧名、简介、声明", @"arrow.up.left.and.arrow.down.right", nil, @"playbackLayout"),
-            NGSettingRow(@"全屏播放", @"横竖视频等比裁切铺满，画面延伸至底栏后方", @"arrow.up.left.and.arrow.down.right", NGPreferencePlaybackFullscreen, nil),
-            NGSettingRow(@"隐藏系统状态栏", @"播放时隐藏时间、网络和电量", @"wifi.slash", NGPreferenceHideStatusBar, nil)
+            NGSettingRow(@"全屏播放", @"去除底部预留黑边；宽屏保留原始大小", @"arrow.up.left.and.arrow.down.right", NGPreferencePlaybackFullscreen, nil)
         ]},
         @{@"title": @"图标定制", @"subtitle": @"动作预设、底栏图标与相册图片", @"symbol": @"square.grid.2x2", @"color": UIColor.systemOrangeColor, @"rows": @[
             NGSettingRow(@"右侧动作图标", @"收藏、评论、点赞、分享；支持相册上传", @"paintbrush.pointed", nil, @"playbackIconPresets"),
@@ -1998,13 +2000,13 @@ static NSArray<NSDictionary *> *NGSettingsGroups(void) {
             NGSettingRow(@"隐藏底栏项目", @"", @"line.3.horizontal.decrease", nil, @"dockItems")
         ]},
         @{@"title": @"液态外观", @"subtitle": @"玻璃材质、底栏颜色与面板", @"symbol": @"drop.halffull", @"color": UIColor.systemTealColor, @"rows": @[
-            NGSettingRow(@"底栏外观与收缩", @"普通 / 清透、动态收缩、尺寸与内容", @"rectangle.bottomthird.inset.filled", nil, @"dockAppearance"),
+            NGSettingRow(@"底栏外观与收缩", @"清透、居中收缩、头像、按钮功能与震动反馈", @"rectangle.bottomthird.inset.filled", nil, @"dockAppearance"),
             NGSettingRow(@"底栏颜色", @"未选中与已选中", @"circle.lefthalf.filled", nil, @"dockColors"),
             NGSettingRow(@"顶部液态容器", @"频道、合集返回、倍速与更多", @"capsule", NGPreferencePlaybackHeaderGlass, nil),
             NGSettingRow(@"全集入口悬浮液态", @"观看完整全集入口改为透明悬浮胶囊", @"play.rectangle", NGPreferenceCollectionGlass, nil),
             NGSettingRow(@"右侧液态按钮", @"", @"circle.grid.2x2", NGPreferencePlaybackGlass, nil),
             NGSettingRow(@"评论区液态玻璃", @"评论面板与输入框", @"text.bubble", NGPreferenceCommentGlass, nil),
-            NGSettingRow(@"分享与长按面板", @"清透玻璃、柔雾玻璃", @"square.and.arrow.up", nil, @"shareGlassStyle"),
+            NGSettingRow(@"分享、长按与倍速面板", @"清透玻璃、柔雾玻璃", @"square.and.arrow.up", nil, @"shareGlassStyle"),
             NGSettingRow(@"评论区玻璃透明度", @"滑动调节玻璃底色和文字对比度", @"slider.horizontal.3", nil, @"commentGlassOpacity"),
         ]},
         @{@"title": @"工具与诊断", @"subtitle": @"页面结构、音频专项与问题采集", @"symbol": @"waveform.path.ecg", @"color": UIColor.systemRedColor, @"rows": @[
@@ -2397,6 +2399,7 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
 - (void)settingChanged:(UISwitch *)sender {
     NSString *key = sender.accessibilityIdentifier;
     [NSUserDefaults.standardUserDefaults setBool:sender.on forKey:key];
+    NGPrepareRuntimeGlass();
     NGUpdateDock();
     if ([key isEqualToString:NGPreferenceHUD]) {
         NGDAudioProbePreferenceDidChange(); NGInstallOverlay();
@@ -2417,9 +2420,6 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
         NGUpdateCommentGlass();
     } else if ([key isEqualToString:NGPreferencePlaybackFullscreen]) {
         NGInstallPlaybackFullscreenHooks(); NGUpdatePlaybackFullscreen();
-    } else if ([key isEqualToString:NGPreferenceHideStatusBar]) {
-        NGInstallPlaybackStatusBarHooks();
-        NGUpdatePlaybackStatusBar();
 
     }
     NGSettingsFeedback();
@@ -2472,15 +2472,12 @@ static void NGInstallLifecycleHooks(void) {
             NGInstallCommentGlassHooks();
             NGInstallPlaybackFullscreenHooks();
             NGUpdatePlaybackFullscreen();
-            NGInstallPlaybackStatusBarHooks();
-            NGUpdatePlaybackStatusBar();
         }));
         Method disappearMethod = class_getInstanceMethod(controllerClass, @selector(viewDidDisappear:));
         IMP disappearOriginal = method_getImplementation(disappearMethod);
         method_setImplementation(disappearMethod, imp_implementationWithBlock(^(UIViewController *controller, BOOL animated) {
             ((void (*)(id, SEL, BOOL))disappearOriginal)(controller, @selector(viewDidDisappear:), animated);
             NGUpdateDock();
-            NGUpdatePlaybackStatusBar();
         }));
         [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidBecomeActiveNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
             NGLog(@"lifecycle", @"foreground", nil);
@@ -2494,8 +2491,6 @@ static void NGInstallLifecycleHooks(void) {
             NGUpdatePlaybackHeaderGlass();
             NGInstallPlaybackFullscreenHooks();
             NGUpdatePlaybackFullscreen();
-            NGInstallPlaybackStatusBarHooks();
-            NGUpdatePlaybackStatusBar();
             NGUpdateDock();
         }];
         [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidEnterBackgroundNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
@@ -2522,30 +2517,34 @@ static void NGRestoreLegacyTopChannels(NSUserDefaults *defaults) {
     [defaults setBool:YES forKey:NGPreferenceChannelRestoreMigration];
 }
 
+static void NGRemoveRetiredPlaybackPreferences(NSUserDefaults *defaults) {
+    for (NSString *key in @[@"com.naiwaguo.playback.xStyle", @"com.naiwaguo.playback.commentVideoFreeze", @"com.naiwaguo.playback.fullscreenLandscape", @"com.naiwaguo.playback.hideStatus"])
+        [defaults removeObjectForKey:key];
+}
+
 static void NGStart(void) {
     if (!NGIsHostApp()) return;
     NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
-    [defaults removeObjectForKey:@"com.naiwaguo.playback.xStyle"];
-    [defaults removeObjectForKey:@"com.naiwaguo.playback.commentVideoFreeze"];
-    [defaults removeObjectForKey:@"com.naiwaguo.playback.fullscreenLandscape"];
+    NGRemoveRetiredPlaybackPreferences(defaults);
     [defaults registerDefaults:@{
         NGPreferenceHUD: @NO,
-        NGPreferenceDock: @YES,
+        NGPreferenceDock: @NO,
+        NGPreferenceDockHaptics: @NO,
         NGPreferenceHiddenDockItems: @[],
         NGPreferencePerformance: @NO,
-        NGPreferenceRuntimeGlass: @YES,
-        NGPreferencePlaybackGlass: @YES,
+        NGPreferenceRuntimeGlass: @NO,
+        NGPreferencePlaybackGlass: @NO,
         NGPreferenceCommentGlass: @NO,
         NGPreferenceCommentGlassOpacity: @0.32,
-        NGPreferenceShareGlass: @YES,
-        NGPreferenceShareGlassClear: @YES,
-        NGPreferenceHideStatusBar: @NO,
+        NGPreferenceShareGlass: @NO,
+        NGPreferenceShareGlassClear: @NO,
         NGPreferencePlaybackFullscreen: @NO,
-        NGPreferencePlaybackHeaderGlass: @YES,
-        NGPreferenceCollectionGlass: @YES,
+        NGPreferencePlaybackHeaderGlass: @NO,
+        NGPreferenceCollectionGlass: @NO,
         NGPreferencePlaybackPreset: @"original"
     }];
     NGRestoreLegacyTopChannels(defaults);
+    NGPrepareRuntimeGlass();
     NGLoadTypographyFont(); NGInstallTypographyHooks(); NGRefreshTypography();
     NGInstallLifecycleHooks();
     NGInstallNativeSettings();
@@ -2557,7 +2556,6 @@ static void NGStart(void) {
     NGInstallPlaybackTextHooks();
     NGInstallPlaybackFullscreenHooks();
     NGUpdatePlaybackFullscreen();
-    NGInstallPlaybackStatusBarHooks();
     NGUpdatePlaybackTextLayout();
     NGLog(@"lifecycle", @"plugin-loaded", @{@"version": NGVersion, @"bundle": NSBundle.mainBundle.bundleIdentifier ?: @"unknown"});
 #ifdef NG_TEST
@@ -2577,8 +2575,6 @@ static void NGStart(void) {
         NGInstallPlaybackTextHooks();
         NGInstallPlaybackFullscreenHooks();
         NGUpdatePlaybackFullscreen();
-        NGInstallPlaybackStatusBarHooks();
-        NGUpdatePlaybackStatusBar();
         NGUpdatePlaybackTextLayout();
     });
 }

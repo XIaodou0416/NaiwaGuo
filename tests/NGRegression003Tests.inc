@@ -16,9 +16,11 @@
 @end
 @interface SSVideoSeriesFeedViewController : UIViewController
 @property(nonatomic) NSUInteger searchInvocations;
+- (void)onAccountLogoutWithUser:(id)user;
 @end
 @implementation SSVideoSeriesFeedViewController
 - (void)simpleSearchViewDidClicked { self.searchInvocations++; }
+- (void)onAccountLogoutWithUser:(id)user {}
 @end
 static NSDictionary *NGTestTypography003(void) {
     NSUserDefaults *d=NSUserDefaults.standardUserDefaults; id scale=[d objectForKey:NGPreferenceFontScale],name=[d objectForKey:NGPreferenceFontName];

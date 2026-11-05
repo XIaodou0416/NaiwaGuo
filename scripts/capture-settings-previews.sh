@@ -25,7 +25,7 @@ for mode in home-light home-dark dock-settings dock-sizes fonts icons community 
   test -f "$CONTAINER/Documents/preview.png"
   sips -Z 1300 "$CONTAINER/Documents/preview.png" --out "$OUT/$mode.png" >/dev/null
 done
-for pair in "regular dock-regular" "clear dock-clear" "left dock-left" "right dock-right"; do
+for pair in "regular dock-regular" "clear dock-clear" "left dock-left" "right dock-right" "center dock-center" "avatar dock-avatar"; do
   read -r mode name <<< "$pair"
   sips -Z 1300 "dist/simulator-validation/$mode-smoke-003.png" --out "$OUT/$name.png" >/dev/null
 done

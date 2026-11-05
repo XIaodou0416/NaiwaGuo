@@ -1,31 +1,257 @@
 {
-  "version": "0.0.4",
+  "version": "0.0.5",
   "date": "2026-11-05",
+  "releaseStatus": "local candidate; not published to GitHub",
   "xcode": "27.0 (27A266a)",
   "sdk": "iOS 27.0",
   "simulator": "iPhone 18 Pro / iOS 27.0",
   "deviceArchitecture": "arm64",
   "minimumDeploymentTarget": "iOS 15.0",
   "fullRegressionPassed": true,
-  "regressionSections": 37,
-  "stabilityAndDockAssertions": 21,
+  "regressionSections": 42,
+  "featureAssertions": {
+    "dockColors005": {
+      "allThreeModesRetainNormalAndSelectedPixels": true,
+      "collapsedSymbolUsesSelectedColor": true,
+      "customPhotosKeepOwnColorsExpandedAndCollapsed": true,
+      "hundredRefreshesPreserveCachedImages": true,
+      "modernPickerUpdatesSelectedAndSearchImmediately": true,
+      "nativeLightAndDarkPlatterDisplaysBothColors": true,
+      "pickerDonePersistsFinalColor": true
+    },
+    "dockHaptics005": {
+      "defaultOffAndNativeTapStillWorks": true,
+      "disabledDockDoesNotVibrate": true,
+      "enabledTapCallsFeedbackOnce": true,
+      "invalidAndDisabledButtonsDoNotVibrate": true,
+      "nativeControllerTapCallsFeedbackOnce": true,
+      "refreshSelectionAndCollapseDoNotVibrate": true,
+      "searchButtonCallsFeedbackOnce": true,
+      "toggleOffStopsFeedbackImmediately": true
+    },
+    "dockActions005": {
+      "accountPhotoUpdatesImmediately": true,
+      "allFourNativeDestinationsDispatchOnce": true,
+      "allNewSettingsVisible": true,
+      "buttonAccessibilityFollowsFunction": true,
+      "centerCollapseAtThreeSizes": true,
+      "centerCollapsedAvatarHasOwnColors": true,
+      "disabledNativeDestinationDoesNotDispatch": true,
+      "invalidActionFallsBackToSearch": true,
+      "logoutClearsAccountPhoto": true,
+      "nativeAccountPhotoKeepsOwnColors": true,
+      "resetRestoresActionAndAppearance": true,
+      "searchAndAvatarDefaults": true,
+      "sidebarUnloadKeepsMemoryOnlyPhoto": true,
+      "videoAuthorIsNeverAccountAvatar": true
+    },
+    "fullscreenTransitions005": {
+      "disableRestoresHostSheetTransform": true,
+      "horizontalChannelSwipeKeepsBottomCoverage": true,
+      "nestedPlayerOffsetPreserved": true,
+      "smallWideVideoKeepsExactNativeFrame": true,
+      "thirtyInsetFrameOpenCloseCycles": true,
+      "thirtyPanelTransformOpenCloseCycles": true
+    },
+    "speedGlass005": {
+      "defaultOff": true,
+      "disableRestoresNativePanel": true,
+      "fiftyRelayoutsKeepMaterialAndNativeControl": true,
+      "speedControllerGetsClearGlass": true,
+      "speedControllerGetsRegularGlass": true
+    },
+    "fullscreenPlayback": {
+      "backgroundCoversReservedBottom": true,
+      "decoderAspectChanges": 1,
+      "detachedRenderRestores": true,
+      "disableRestores": true,
+      "firstMiddleLastPages": true,
+      "fractionalSwipeRemainsAligned": true,
+      "hundredHostRewrites": true,
+      "landscapeCompleteFrameWithoutCrop": true,
+      "lateReplacementKeepsAspect": true,
+      "legacyLandscapeValueCannotCrop": true,
+      "nativeHUDAndTouches": true,
+      "nativePagingGeometry": true,
+      "noOpFrameWrites": true,
+      "overlayWindowExcluded": true,
+      "portraitFills": true,
+      "squareAndUltrawideFit": true,
+      "uniformVideoScale": true,
+      "unrelatedViewsUnchanged": true
+    },
+    "statusBarRouting": {
+      "hostStatusRoutingPreserved": true,
+      "legacyEnabledValueCannotHideStatusBar": true,
+      "legacyPreferenceRemoved": true,
+      "settingRemoved": true
+    }
+  },
   "searchNavigationCases": {
-    "fonts": true,
-    "icons": true,
-    "visibility": true,
-    "fullscreen": true,
-    "clear": true,
-    "qq": true,
-    "cancel": true,
-    "empty": true
+    "fonts": {
+      "navigationDepth": 2,
+      "topClass": "NGTypographyController",
+      "matched": true,
+      "pendingAtEnd": 0,
+      "passed": true,
+      "case": "fonts",
+      "searchActiveAfter": false,
+      "correctGroupAndVisibleHighlight": true,
+      "externalOpens": 0,
+      "title": "字体与字号",
+      "activeSearchAtSelection": true,
+      "emptyFooterFits": true,
+      "tapState": {
+        "homeNavTop": "NGSettingsViewController",
+        "homeNavPresent": 1,
+        "realNavTop": "NGSettingsViewController",
+        "pendingAfterTap": 1,
+        "searchPresented": 1
+      }
+    },
+    "icons": {
+      "navigationDepth": 2,
+      "topClass": "NGPlaybackPresetSettingsController",
+      "matched": true,
+      "pendingAtEnd": 0,
+      "passed": true,
+      "case": "icons",
+      "searchActiveAfter": false,
+      "correctGroupAndVisibleHighlight": true,
+      "externalOpens": 0,
+      "title": "右侧图标",
+      "activeSearchAtSelection": true,
+      "emptyFooterFits": true,
+      "tapState": {
+        "homeNavTop": "NGSettingsViewController",
+        "homeNavPresent": 1,
+        "realNavTop": "NGSettingsViewController",
+        "pendingAfterTap": 1,
+        "searchPresented": 1
+      }
+    },
+    "visibility": {
+      "navigationDepth": 2,
+      "topClass": "NGPlaybackVisibilitySettingsController",
+      "matched": true,
+      "pendingAtEnd": 0,
+      "passed": true,
+      "case": "visibility",
+      "searchActiveAfter": false,
+      "correctGroupAndVisibleHighlight": true,
+      "externalOpens": 0,
+      "title": "播放页元素显示",
+      "activeSearchAtSelection": true,
+      "emptyFooterFits": true,
+      "tapState": {
+        "homeNavTop": "NGSettingsViewController",
+        "homeNavPresent": 1,
+        "realNavTop": "NGSettingsViewController",
+        "pendingAfterTap": 1,
+        "searchPresented": 1
+      }
+    },
+    "fullscreen": {
+      "navigationDepth": 2,
+      "topClass": "NGSettingsGroupViewController",
+      "matched": true,
+      "pendingAtEnd": 0,
+      "passed": true,
+      "case": "fullscreen",
+      "searchActiveAfter": false,
+      "correctGroupAndVisibleHighlight": true,
+      "externalOpens": 0,
+      "title": "播放布局",
+      "activeSearchAtSelection": true,
+      "emptyFooterFits": true,
+      "tapState": {
+        "homeNavTop": "NGSettingsViewController",
+        "homeNavPresent": 1,
+        "realNavTop": "NGSettingsViewController",
+        "pendingAfterTap": 1,
+        "searchPresented": 1
+      }
+    },
+    "clear": {
+      "navigationDepth": 2,
+      "topClass": "NGSettingsGroupViewController",
+      "matched": true,
+      "pendingAtEnd": 0,
+      "passed": true,
+      "case": "clear",
+      "searchActiveAfter": false,
+      "correctGroupAndVisibleHighlight": true,
+      "externalOpens": 0,
+      "title": "工具与诊断",
+      "activeSearchAtSelection": true,
+      "emptyFooterFits": true,
+      "tapState": {
+        "homeNavTop": "NGSettingsViewController",
+        "homeNavPresent": 1,
+        "realNavTop": "NGSettingsViewController",
+        "pendingAfterTap": 1,
+        "searchPresented": 1
+      }
+    },
+    "qq": {
+      "navigationDepth": 2,
+      "topClass": "NGCommunityViewController",
+      "matched": true,
+      "pendingAtEnd": 0,
+      "passed": true,
+      "case": "qq",
+      "searchActiveAfter": false,
+      "correctGroupAndVisibleHighlight": true,
+      "externalOpens": 0,
+      "title": "交流群",
+      "activeSearchAtSelection": true,
+      "emptyFooterFits": true,
+      "tapState": {
+        "homeNavTop": "NGSettingsViewController",
+        "homeNavPresent": 1,
+        "realNavTop": "NGSettingsViewController",
+        "pendingAfterTap": 1,
+        "searchPresented": 1
+      }
+    },
+    "cancel": {
+      "navigationDepth": 1,
+      "topClass": "NGSettingsViewController",
+      "matched": true,
+      "pendingAtEnd": 0,
+      "passed": true,
+      "case": "cancel",
+      "searchActiveAfter": false,
+      "correctGroupAndVisibleHighlight": true,
+      "externalOpens": 0,
+      "title": "设置",
+      "activeSearchAtSelection": true,
+      "emptyFooterFits": true,
+      "tapState": {}
+    },
+    "empty": {
+      "navigationDepth": 1,
+      "topClass": "NGSettingsViewController",
+      "matched": true,
+      "pendingAtEnd": 0,
+      "passed": true,
+      "case": "empty",
+      "searchActiveAfter": true,
+      "correctGroupAndVisibleHighlight": true,
+      "externalOpens": 0,
+      "title": "设置",
+      "activeSearchAtSelection": true,
+      "emptyFooterFits": true,
+      "tapState": {}
+    }
   },
   "nativeUICases": {
     "font": {
       "passed": 1,
-      "durationSeconds": 4.800695624988293,
+      "durationSeconds": 4.801212541642599,
       "profileSettingsFontNavigationCycles": 10,
       "mainThreadHeartbeats": 40,
-      "maxHeartbeatGapSeconds": 0.12103774999559391
+      "maxHeartbeatGapSeconds": 0.12170233333017677
     },
     "regular": {
       "passed": 1,
@@ -80,6 +306,30 @@
       "collapseSide": 2,
       "expandedNativePlateVisible": true,
       "collapsedFrame": "{{319, 0}, {62, 62}}",
+      "clear": true,
+      "nativeSearchDispatchedOnce": true,
+      "collapsedNativePlateVisible": true,
+      "capsule": "{{21, 0}, {286, 62}}",
+      "nativeMaterialApplied": true,
+      "searchCircle": "{{319, 0}, {62, 62}}"
+    },
+    "center": {
+      "passed": 1,
+      "collapseSide": 3,
+      "expandedNativePlateVisible": true,
+      "collapsedFrame": "{{170, 0}, {62, 62}}",
+      "clear": true,
+      "nativeSearchDispatchedOnce": true,
+      "collapsedNativePlateVisible": true,
+      "capsule": "{{21, 0}, {286, 62}}",
+      "nativeMaterialApplied": true,
+      "searchCircle": "{{319, 0}, {62, 62}}"
+    },
+    "avatar": {
+      "passed": 1,
+      "collapseSide": 3,
+      "expandedNativePlateVisible": true,
+      "collapsedFrame": "{{170, 0}, {62, 62}}",
       "clear": true,
       "nativeSearchDispatchedOnce": true,
       "collapsedNativePlateVisible": true,
@@ -149,6 +399,44 @@
       "disabledStopsRecording": 1
     }
   },
+  "coldStartAndRetainedDefaults": {
+    "fresh": {
+      "passed": true,
+      "checks": {
+        "nativeCompatibilityAutomaticallyMatchesSystem": 1,
+        "featureDefaultsOrSavedChoicesCorrect": true,
+        "dockMatchesOptIn": 1,
+        "dockSettingsShowCorrectSwitches": true,
+        "debugOverlayOff": 1,
+        "manualChoicePersists": 1,
+        "defaultTypographyAndIcons": 1,
+        "mainSettingsSwitchesOff": true
+      }
+    },
+    "retained": {
+      "passed": true,
+      "checks": {
+        "nativeCompatibilityAutomaticallyMatchesSystem": 1,
+        "featureDefaultsOrSavedChoicesCorrect": true,
+        "dockMatchesOptIn": 1,
+        "dockSettingsShowCorrectSwitches": true,
+        "debugOverlayOff": 1,
+        "manualChoicePersists": 1,
+        "defaultTypographyAndIcons": 1,
+        "mainSettingsSwitchesOff": true
+      }
+    }
+  },
+  "panelAnimation": {
+    "passed": 1,
+    "nativeAnimationBoundsPreserved": true,
+    "samples": 109,
+    "openingNeverZoomsOutward": true,
+    "maxHeight": 874.0000000000001,
+    "minHeight": 509.6,
+    "closingNeverJumpsBack": true,
+    "closedReturnsToFullscreen": true
+  },
   "supportAndCommunityChecks": {
     "allFiveCardsFitNarrowScreen": true,
     "allThreeOriginalURLsExact": true,
@@ -177,10 +465,9 @@
     "unknownActionDoesNotOpen": 1,
     "versionStartsAt001": true
   },
-  "settingsScreenshots": 15,
-  "branding": "Host app icon; colored category icons; no upstream project name in interface strings.",
-  "originalSponsorImageVerified": true,
+  "settingsScreenshots": 17,
   "publicSourcePrivatePathAndSecretScanPassed": true,
   "physicalDeviceTested": false,
+  "lowerIOSRuntimeTested": false,
   "FLEXKingExternalIntegrationTested": false
 }

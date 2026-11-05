@@ -1,3 +1,6 @@
+static NSString *const NGPreferenceDockAction=@"com.naiwaguo.appearance.dockAction";
+static NSString *const NGPreferenceDockAvatar=@"com.naiwaguo.appearance.dockAvatar";
+static NSString *const NGPreferenceDockHaptics=@"com.naiwaguo.appearance.dockHaptics";
 static NSString *const NGPreferenceDockClear=@"com.naiwaguo.appearance.dockClear";
 static NSString *const NGPreferenceDockCollapse=@"com.naiwaguo.appearance.dockCollapse";
 static NSString *const NGPreferenceDockHeight=@"com.naiwaguo.appearance.dockHeight";
@@ -6,7 +9,7 @@ static NSString *const NGPreferenceDockSearchSize=@"com.naiwaguo.appearance.dock
 static NSString *const NGPreferenceDockContent=@"com.naiwaguo.appearance.dockContent";
 static NSInteger NGDockContentMode(void) { NSInteger n=[NSUserDefaults.standardUserDefaults integerForKey:NGPreferenceDockContent]; return n>=0 && n<=2 ? n : 0; }
 static NSInteger NGDockCollapseSide(void) {
-    if (@available(iOS 26.0,*)) { if (UIDevice.currentDevice.userInterfaceIdiom==UIUserInterfaceIdiomPhone) { NSInteger n=[NSUserDefaults.standardUserDefaults integerForKey:NGPreferenceDockCollapse]; return n==1 || n==2 ? n : 0; } } return 0;
+    if (@available(iOS 26.0,*)) { if (UIDevice.currentDevice.userInterfaceIdiom==UIUserInterfaceIdiomPhone) { NSInteger n=[NSUserDefaults.standardUserDefaults integerForKey:NGPreferenceDockCollapse]; return n>=1 && n<=3 ? n : 0; } } return 0;
 }
 static CGFloat NGDockSize(NSString *key) { id n=[NSUserDefaults.standardUserDefaults objectForKey:key]; CGFloat value=n ? [n doubleValue] : 100; return isfinite(value) ? MIN(1,MAX([key isEqualToString:NGPreferenceDockLength]?0.8:0.6,value/100)) : 1; }
 static NSString *const NGPreferenceDock = @"com.naiwaguo.appearance.dock";
@@ -143,6 +146,8 @@ static void NGDockApplyRenderedImages(UITabBarItem *item, NSUInteger index, UIUs
     state.normalImage = mode==0 ? NGDockTitleImage(title,normal) : (mode==1 ? NGIconImageOnCanvas(normalIcon,26,26) : NGDockIconCaptionImage(normalIcon,title,normal));
     state.selectedImage = mode==0 ? NGDockTitleImage(title,selected) : (mode==1 ? NGIconImageOnCanvas(selectedIcon,26,26) : NGDockIconCaptionImage(selectedIcon,title,selected));
     objc_setAssociatedObject(item, &NGDockRenderedItemAssociation, state, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    state.normalImage = [state.normalImage imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+    state.selectedImage = [state.selectedImage imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
     item.title = nil; item.image = state.normalImage; item.selectedImage = state.selectedImage;
 }
 static NSString *NGDockItemKey(NSUInteger index) {
@@ -184,6 +189,7 @@ static void NGDockRestoreButton(UIControl *button) {
     state.hiddenManaged = NO;
 }
 
+#include "NGDockActions.inc"
 #include "NGDYDock.inc"
 
 static NSArray<UIControl *> *NGDockOriginalButtons(UIView *bar) {
@@ -549,6 +555,7 @@ static void NGUpdateDock(void) {
 @end
 
 static void NGInstallDockHooks(void) {
+    NGInstallDockAvatarHooks();
     NGDockInstallPlatterHooks();
     static BOOL hitInstalled; Class barClass=NSClassFromString(@"SSTabBar");
     if (barClass && !hitInstalled) {
@@ -616,9 +623,14 @@ static void NGInstallDockHooks(void) {
     picker.selectedColor = NGDockColor(self.editingSelected, self.traitCollection.userInterfaceStyle);
     [self presentViewController:picker animated:YES completion:nil];
 }
-- (void)colorPickerViewControllerDidSelectColor:(UIColorPickerViewController *)picker {
+- (void)colorPickerViewController:(UIColorPickerViewController *)picker didSelectColor:(UIColor *)color continuously:(BOOL)continuously {
+    [self saveDockColor:color];
+}
+- (void)colorPickerViewControllerDidSelectColor:(UIColorPickerViewController *)picker { [self saveDockColor:picker.selectedColor]; }
+- (void)colorPickerViewControllerDidFinish:(UIColorPickerViewController *)picker { [self saveDockColor:picker.selectedColor]; }
+- (void)saveDockColor:(UIColor *)color {
     CGFloat r, g, b, a;
-    if (![picker.selectedColor getRed:&r green:&g blue:&b alpha:&a]) return;
+    if (![color getRed:&r green:&g blue:&b alpha:&a]) return;
     [NSUserDefaults.standardUserDefaults setObject:@[@(r), @(g), @(b), @(a)] forKey:self.editingSelected ? NGPreferenceDockSelectedColor : NGPreferenceDockNormalColor];
     [self updatePreview];
     if (!self.refreshScheduled) {
@@ -646,5 +658,16 @@ static BOOL NGDockInvokeNativeSearch(UITabBarController *host) {
     }
     UIAlertController *alert=[UIAlertController alertControllerWithTitle:@"暂时无法打开搜索" message:@"当前红果版本未找到原生搜索入口，请先返回首页使用顶部搜索。" preferredStyle:UIAlertControllerStyleAlert];
     [alert addAction:[UIAlertAction actionWithTitle:@"好" style:UIAlertActionStyleDefault handler:nil]]; [NGTopController() presentViewController:alert animated:YES completion:nil]; return NO;
+}
+static BOOL NGDockInvokeAction(NGSystemDock *dock) {
+    if (!dock.host) return NO;
+    NSString *action=NGDockAction();
+    if ([action isEqual:@"search"]) return NGDockInvokeNativeSearch(dock.host);
+    if ([action isEqual:@"settings"]) { NGOpenSettings(); return YES; }
+    NSUInteger index=[NGDockItemKeys() indexOfObject:action];
+    NSArray<UIControl *> *buttons=dock.originalBar ? NGDockOriginalButtons(dock.originalBar) : @[];
+    if (index==NSNotFound || index>=buttons.count || !buttons[index].enabled) return NO;
+    [buttons[index] sendActionsForControlEvents:UIControlEventTouchUpInside];
+    NGRefreshDock(dock.host); return YES;
 }
 #include "NGDockAppearanceSettings.inc"

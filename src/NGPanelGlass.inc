@@ -1,6 +1,6 @@
 static NSString *const NGPreferenceShareGlassClear = @"com.naiwaguo.playback.shareGlassClear";
 static char NGPanelMaterialStateAssociation;
-static BOOL NGPanelShareKind(NSString *kind) { return [kind isEqualToString:@"Share"] || [kind isEqualToString:@"More"]; }
+static BOOL NGPanelShareKind(NSString *kind) { return [kind isEqualToString:@"Share"] || [kind isEqualToString:@"More"] || [kind isEqualToString:@"Speed"]; }
 static char NGCommentGlassAssociation, NGPanelSurfaceAssociation;
 static char NGPanelBackgroundAssociation, NGPanelEffectAssociation, NGPanelTraitAssociation, NGPanelTextAssociation;
 static char NGPanelCoverAssociation, NGPanelLayerStateKey;
@@ -31,7 +31,7 @@ static BOOL NGCommentGlassEnabled(void) { return [NSUserDefaults.standardUserDef
 static BOOL NGSharePanelController(id controller) {
     NSString *name = NGClassName(controller);
     return [name containsString:@"SharePanel"] || [name containsString:@"ShareViewController"] ||
-           [name containsString:@"UGKmpSharePanelContainer"] || [name isEqualToString:@"FQVShortVideoSettingsViewController"];
+           [name containsString:@"UGKmpSharePanelContainer"] || [name isEqualToString:@"FQVShortVideoSettingsViewController"] || [name isEqualToString:@"FQVShortVideoNewSpeedSelectController"];
 }
 static BOOL NGPanelVisible(UIView *view) {
     if (!view || CGRectIsEmpty(view.bounds)) return NO;
@@ -127,7 +127,7 @@ static UIVisualEffectView *NGPanelMaterial(UIView *root, NSString *kind, CGRect 
     }
     glass.frame = frame; glass.hidden=NO; glass.alpha=1;
     BOOL share = NGPanelShareKind(kind);
-    BOOL clear = share && (![NSUserDefaults.standardUserDefaults objectForKey:NGPreferenceShareGlassClear] || [NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceShareGlassClear]);
+    BOOL clear = share && [NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceShareGlassClear];
     NSString *material = [NSString stringWithFormat:@"%d|%ld", clear, (long)root.traitCollection.userInterfaceStyle];
     if (CGRectGetWidth(frame) >= 8 && CGRectGetHeight(frame) >= 8 && (!glass.effect || ![objc_getAssociatedObject(glass, &NGPanelMaterialStateAssociation) isEqual:material])) {
         if (@available(iOS 26.0, *)) {
@@ -255,7 +255,7 @@ static void NGDecorateShareController(UIViewController *controller) {
     UIView *root = controller.view;
     if (![NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceShareGlass]) { NGPanelRestore(root); return; }
     NGPanelUpdating = YES;
-    @try { NGPanelMaterial(root, [NGClassName(controller) isEqualToString:@"FQVShortVideoSettingsViewController"] ? @"More" : @"Share", root.bounds); NGPanelClearCovers(root, YES); }
+    @try { NGPanelMaterial(root, [NGClassName(controller) isEqualToString:@"FQVShortVideoSettingsViewController"] ? @"More" : ([NGClassName(controller) isEqualToString:@"FQVShortVideoNewSpeedSelectController"] ? @"Speed" : @"Share"), root.bounds); NGPanelClearCovers(root, YES); }
     @finally { NGPanelUpdating = NO; }
 }
 static void NGUpdateCommentGlass(void) {
@@ -361,7 +361,7 @@ static void NGInstallCommentGlassHooks(void) {
         });
         if (!class_addMethod(target, selector, replacement, method_getTypeEncoding(method))) class_replaceMethod(target, selector, replacement, method_getTypeEncoding(method)); [installed addObject:name];
     }
-    for (NSString *className in @[@"SSUGKmpSharePanelContainerViewController", @"SSVideoSharePanelViewController", @"FQVShortVideoSettingsViewController"]) {
+    for (NSString *className in @[@"SSUGKmpSharePanelContainerViewController", @"SSVideoSharePanelViewController", @"FQVShortVideoSettingsViewController", @"FQVShortVideoNewSpeedSelectController"]) {
         Class target = NSClassFromString(className);
         if (!target || [installed containsObject:className]) continue;
         for (NSString *name in @[@"viewWillAppear:", @"viewDidAppear:", @"viewDidLayoutSubviews", @"viewDidDisappear:"]) {
@@ -378,7 +378,7 @@ static void NGInstallCommentGlassHooks(void) {
         }
         [installed addObject:className];
     }
-    for (NSString *name in @[@"FQVShortVideoSettingsCell", @"FQVShortVideoSettingsThumbnailCell", @"FQVShortVideoSettingsArrowCell", @"FQVShortVideoSettingsArrowWithInfoCell", @"FQVShortVideoSettingsSwitchCell", @"FQVShortVideoSettingsOptionCell", @"SSShortVideoMorePanelShareHeaderView"]) {
+    for (NSString *name in @[@"FQVShortVideoSmartSpeedSelectCell", @"FQVShortVideoSettingsCell", @"FQVShortVideoSettingsThumbnailCell", @"FQVShortVideoSettingsArrowCell", @"FQVShortVideoSettingsArrowWithInfoCell", @"FQVShortVideoSettingsSwitchCell", @"FQVShortVideoSettingsOptionCell", @"SSShortVideoMorePanelShareHeaderView"]) {
         Class target = NSClassFromString(name); if (!target || [installed containsObject:name]) continue;
         SEL selector = @selector(layoutSubviews); Method method = class_getInstanceMethod(target, selector); if (!method) continue;
         IMP original = method_getImplementation(method);
@@ -398,14 +398,14 @@ static void NGInstallCommentGlassHooks(void) {
 @interface NGShareGlassSettingsController : NGSettingsTableController @end
 @implementation NGShareGlassSettingsController
 - (instancetype)init { return [super initWithStyle:UITableViewStyleInsetGrouped]; }
-- (void)viewDidLoad { [super viewDidLoad]; self.title = @"分享与长按面板"; }
+- (void)viewDidLoad { [super viewDidLoad]; self.title = @"分享、长按与倍速面板"; }
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return 3; }
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)path {
     UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
     cell.textLabel.text = @[@"关闭", @"柔雾玻璃", @"清透玻璃"][path.row];
     cell.imageView.image = [UIImage systemImageNamed:@[@"circle.slash", @"drop.halffull", @"drop"][path.row]];
     BOOL enabled = [NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceShareGlass];
-    BOOL clear = ![NSUserDefaults.standardUserDefaults objectForKey:NGPreferenceShareGlassClear] || [NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceShareGlassClear];
+    BOOL clear = [NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceShareGlassClear];
     cell.accessoryType = path.row == (enabled ? (clear ? 2 : 1) : 0) ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone;
     return cell;
 }
@@ -413,6 +413,7 @@ static void NGInstallCommentGlassHooks(void) {
     [tableView deselectRowAtIndexPath:path animated:YES];
     [NSUserDefaults.standardUserDefaults setBool:path.row != 0 forKey:NGPreferenceShareGlass];
     [NSUserDefaults.standardUserDefaults setBool:path.row == 2 forKey:NGPreferenceShareGlassClear];
+    NGPrepareRuntimeGlass();
     NGUpdateCommentGlass(); [self.tableView reloadData];
     [[UISelectionFeedbackGenerator new] selectionChanged];
 }

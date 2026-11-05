@@ -1,6 +1,6 @@
 # 功能界面截图
 
-顶部使用宿主红果原图标，功能入口按类别配色。以下均为 0.0.4 模拟器实际运行界面；底栏背景是合成内容。真机效果等待作者提供，届时单独记录机型与版本。
+顶部使用宿主红果原图标，功能入口按类别配色。以下均为 0.0.5 模拟器实际运行界面；底栏背景是合成内容。真机效果等待作者提供，届时单独记录机型与版本。
 
 | 普通液态 | 清透液态 |
 | --- | --- |
@@ -10,9 +10,9 @@
 | --- | --- |
 | <img src="previews/dock-left.png" width="290" alt="左侧收缩" /> | <img src="previews/dock-right.png" width="290" alt="右侧收缩" /> |
 
-| 尺寸设置 | 交流群邀请 |
+| 独立按钮与头像 | 交流群邀请 |
 | --- | --- |
-| <img src="previews/dock-sizes.png" width="290" alt="底栏尺寸设置" /> | <img src="previews/community.png" width="290" alt="交流群邀请" /> |
+| <img src="previews/dock-sizes.png" width="290" alt="独立按钮与头像设置" /> | <img src="previews/community.png" width="290" alt="交流群邀请" /> |
 
 | 赞赏 · 浅色 | 赞赏 · 深色 |
 | --- | --- |
@@ -25,3 +25,11 @@
 ## 真机效果
 
 待提供。当前不声称已完成红果真机验收。
+
+## 居中收缩与头像
+
+模拟器中的原生底栏。头像为合成字母图案，用于验证红果账号头像接入，不是用户真实头像。
+
+| 居中收缩 | 账号头像图案 |
+| --- | --- |
+| ![居中收缩](previews/dock-center.png) | ![账号头像](previews/dock-avatar.png) |

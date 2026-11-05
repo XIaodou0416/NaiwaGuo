@@ -149,11 +149,12 @@ static NSDictionary *NGTestBackdrop075(void) {
     [d setBool:YES forKey:NGPreferencePlaybackFullscreen]; NGInstallPlaybackFullscreenHooks(); NGUpdatePlaybackFullscreen();
     BOOL cleared=bottom.alpha==0&&top.alpha==1; bottom.alpha=0.6; BOOL repaint=bottom.alpha==0;
     [d setBool:NO forKey:NGPreferencePlaybackFullscreen]; NGUpdatePlaybackFullscreen(); BOOL restored=fabs(bottom.alpha-0.6)<0.001;
-    // Detail pages can already occupy the full viewport; cropping must still work.
+    // Full-height collection pages must also preserve the complete landscape frame.
     host.nativeHeight=window.bounds.size.height; host.feed.frame=window.bounds; ((UICollectionViewFlowLayout *)host.feed.collectionViewLayout).itemSize=window.bounds.size; [host.feed reloadData]; [host.feed layoutIfNeeded];
     [d setBool:YES forKey:NGPreferencePlaybackFullscreen]; NGUpdatePlaybackFullscreen();
     UIView *render=[[host.feed cellForItemAtIndexPath:[NSIndexPath indexPathForItem:0 inSection:0]] viewWithTag:7402];
-    BOOL nativeFull=render&&NGFSNear([render convertRect:render.bounds toView:window].size.height,window.bounds.size.height);
+    CGRect fitted=[render convertRect:render.bounds toView:window];
+    BOOL nativeFull=render && NGFSNear(fitted.size.width,window.bounds.size.width) && NGFSNear(fitted.size.height,window.bounds.size.width*9/16) && NGFSNear(CGRectGetMidY(fitted),window.bounds.size.height/2);
     [d setBool:NO forKey:NGPreferencePlaybackFullscreen]; NGUpdatePlaybackFullscreen(); window.hidden=YES; [previous makeKeyWindow]; [d setBool:old forKey:NGPreferencePlaybackFullscreen];
-    return @{@"bottomGradientTransparentTopPreserved":@(cleared), @"hostAlphaRepaintSuppressed":@(repaint), @"latestAlphaRestored":@(restored), @"alreadyFullHeightFeedAlsoCrops":@(nativeFull)};
+    return @{@"bottomGradientTransparentTopPreserved":@(cleared), @"hostAlphaRepaintSuppressed":@(repaint), @"latestAlphaRestored":@(restored), @"alreadyFullHeightFeedKeepsLandscapeAspect":@(nativeFull)};
 }

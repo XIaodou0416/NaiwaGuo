@@ -660,7 +660,6 @@ static NSDictionary *NGTestHeaderRestore(void) {
 static NSDictionary *NGTestFullscreenAndPreview(void) {
     NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
     BOOL savedLegacyFullscreen = [defaults boolForKey:@"com.naiwaguo.playback.fullscreen"];
-    BOOL savedStatus = [defaults boolForKey:NGPreferenceHideStatusBar];
     id savedPanelOrigin = [defaults objectForKey:@"com.naiwaguo.preview.panelOrigin"];
     UIViewController *owner = [UIViewController new];
     owner.view.frame = CGRectMake(0, 0, 402, 874);
@@ -675,10 +674,8 @@ static NSDictionary *NGTestFullscreenAndPreview(void) {
     [owner.view layoutIfNeeded];
     CGRect collectionFrame = collection.frame, cellFrame = cell.frame, playerFrame = player.frame;
     [defaults setBool:YES forKey:@"com.naiwaguo.playback.fullscreen"];
-    [defaults setBool:YES forKey:NGPreferenceHideStatusBar];
-    NGUpdatePlaybackStatusBar();
     BOOL geometryUnchanged = CGRectEqualToRect(collection.frame, collectionFrame) && CGRectEqualToRect(cell.frame, cellFrame) && CGRectEqualToRect(player.frame, playerFrame);
-    BOOL statusWouldHide = NGPlaybackVisibleForStatusBar();
+    BOOL playbackDetected = NGVisiblePlaybackPlayer() != nil;
     NGPresentLivePreview();
     BOOL presented = NGLivePreviewWindow != nil && NGLivePreviewWindow.rootViewController != nil;
     NSUInteger sliders = 0;
@@ -721,11 +718,10 @@ static NSDictionary *NGTestFullscreenAndPreview(void) {
     if (savedLegacyFullscreen) [defaults setBool:YES forKey:@"com.naiwaguo.playback.fullscreen"]; else [defaults removeObjectForKey:@"com.naiwaguo.playback.fullscreen"];
     if (savedPanelOrigin) [defaults setObject:savedPanelOrigin forKey:@"com.naiwaguo.preview.panelOrigin"];
     else [defaults removeObjectForKey:@"com.naiwaguo.preview.panelOrigin"];
-    [defaults setBool:savedStatus forKey:NGPreferenceHideStatusBar];
     BOOL fullscreenSettingPresent = NO;
     for (NSDictionary *group in NGSettingsGroups()) for (NSDictionary *row in group[@"rows"])
         fullscreenSettingPresent |= [row[@"title"] isEqual:@"全屏播放"] && [row[@"key"] isEqual:NGPreferencePlaybackFullscreen];
-    return @{@"fullscreenSettingPresent": @(fullscreenSettingPresent), @"geometryUnchanged": @(geometryUnchanged), @"statusPlaybackDetected": @(statusWouldHide),
+    return @{@"fullscreenSettingPresent": @(fullscreenSettingPresent), @"geometryUnchanged": @(geometryUnchanged), @"playbackDetected": @(playbackDetected),
              @"previewPresented": @(presented), @"previewSliderCount": @(sliders), @"previewDismissed": @(dismissed), @"previewDragHandle": @(hasDragHandle), @"previewMovesAndPersists": @(panelMovesAndPersists), @"dragSurvivesLayout": @(dragContinuesThroughLayout && secondDragContinues), @"panelStartOrigin": NSStringFromCGPoint(startOrigin), @"panelFrameAfterMove": NSStringFromCGRect(preview.panel.frame), @"expectedPanelOrigin": NSStringFromCGPoint(movedOrigin)};
 }
 
@@ -902,6 +898,8 @@ static NSDictionary *NGTestPlaybackHeaderGlass(void) {
 #include "NGRegression002Tests.inc"
 #include "NGRegression003Tests.inc"
 #include "NGDebug003Tests.inc"
+#include "NGRegression005Tests.inc"
+#include "NGContinuation005Tests.inc"
 
 static void NGWriteTestResult(NSDictionary *result) {
     NSString *documents = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
@@ -930,6 +928,12 @@ static void NGWriteTestResult(NSDictionary *result) {
     [self.window makeKeyAndVisible];
 
     NSArray *arguments = NSProcessInfo.processInfo.arguments;
+    if ([arguments containsObject:@"--panel-motion005"]) { NGRunPanelMotion005(self.window); return; }
+    if ([arguments containsObject:@"--fresh-defaults005"] || [arguments containsObject:@"--retained-defaults005"]) {
+        NGStart();
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,1.1*NSEC_PER_SEC),dispatch_get_main_queue(),^{ NGRunDefaults005(self.window,[arguments containsObject:@"--retained-defaults005"]); });
+        return;
+    }
     for (NSString *mode in @[@"debug-page-003",@"debug-audio-003",@"debug-ui-003",@"debug-late-003"]) if ([arguments containsObject:[@"--" stringByAppendingString:mode]]) { NGRunDebug003(self.window,mode); return; }
     if ([arguments containsObject:@"--stress-font003"]) {
         NGStart(); [NSUserDefaults.standardUserDefaults setDouble:0.8 forKey:NGPreferenceFontScale]; [NSUserDefaults.standardUserDefaults setObject:@"Georgia" forKey:NGPreferenceFontName]; NGRefreshTypography();
@@ -945,16 +949,21 @@ static void NGWriteTestResult(NSDictionary *result) {
     }
     if ([arguments containsObject:@"--preview-dock003"]) {
         NGStart(); NSUserDefaults *d=NSUserDefaults.standardUserDefaults; [d setBool:YES forKey:NGPreferenceDock]; [d setBool:[arguments containsObject:@"--clear"] forKey:NGPreferenceDockClear];
-        NSInteger collapse=[arguments containsObject:@"--collapse-left"] ? 1 : ([arguments containsObject:@"--collapse-right"] ? 2 : 0); [d setInteger:collapse forKey:NGPreferenceDockCollapse];
+        NSInteger collapse=[arguments containsObject:@"--collapse-left"] ? 1 : ([arguments containsObject:@"--collapse-right"] ? 2 : ([arguments containsObject:@"--collapse-center"] ? 3 : 0)); [d setInteger:collapse forKey:NGPreferenceDockCollapse];
+        [d setBool:[arguments containsObject:@"--account-avatar"] forKey:NGPreferenceDockAvatar]; [d setObject:@"search" forKey:NGPreferenceDockAction];
         SSTabBarController *host=[SSTabBarController new]; self.window.rootViewController=host; self.window.overrideUserInterfaceStyle=[arguments containsObject:@"--dark"] ? UIUserInterfaceStyleDark : UIUserInterfaceStyleLight; [host loadViewIfNeeded];
         SSVideoSeriesFeedViewController *feed=[SSVideoSeriesFeedViewController new]; NSMutableArray *pages=[host.viewControllers mutableCopy]; pages[0]=feed; host.viewControllers=pages;
+        if ([arguments containsObject:@"--account-avatar"]) {
+            SSVideoSeriesFeedSideBarUserInfoCell *account=[SSVideoSeriesFeedSideBarUserInfoCell new]; account.avatarView=[SSAvatarView new]; account.avatarView.avatarView=[SSBaseReaderImageView new]; [account.contentView addSubview:account.avatarView]; [account.avatarView addSubview:account.avatarView.avatarView]; [feed.view addSubview:account];
+            account.avatarView.avatarView.image=[[[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(80,80)] imageWithActions:^(UIGraphicsImageRendererContext *ctx){ [UIColor.systemOrangeColor setFill]; UIRectFill(CGRectMake(0,0,80,80)); [@"N" drawAtPoint:CGPointMake(20,12) withAttributes:@{NSFontAttributeName:[UIFont boldSystemFontOfSize:48],NSForegroundColorAttributeName:UIColor.whiteColor}]; }]; [account updateUserInfo];
+        }
         CAGradientLayer *gradient=[CAGradientLayer layer]; gradient.colors=@[(__bridge id)[UIColor colorWithRed:0.16 green:0.25 blue:0.34 alpha:1].CGColor,(__bridge id)[UIColor colorWithRed:0.7 green:0.45 blue:0.25 alpha:1].CGColor]; gradient.frame=self.window.bounds; [feed.view.layer insertSublayer:gradient atIndex:0];
         for (NSUInteger i=0;i<18;i++) { UILabel *label=[[UILabel alloc] initWithFrame:CGRectMake(20,40+i*47,350,35)]; label.text=[NSString stringWithFormat:@"短剧内容 %02lu    NaiwaGuo",(unsigned long)i]; label.font=[UIFont systemFontOfSize:20 weight:UIFontWeightMedium]; label.textColor=UIColor.whiteColor; [feed.view addSubview:label]; }
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW,0.4*NSEC_PER_SEC),dispatch_get_main_queue(),^{ CGFloat h=49+self.window.safeAreaInsets.bottom; host.customBar.frame=CGRectMake(0,self.window.bounds.size.height-h,self.window.bounds.size.width,h); NGRefreshDock(host); });
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW,0.8*NSEC_PER_SEC),dispatch_get_main_queue(),^{ NGSystemDock *dock=objc_getAssociatedObject(host,&NGDockAssociation); [dock layoutGlass]; if (collapse) [dock setCollapsed:YES]; });
         __block BOOL collapsedOK=YES;
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW,1.6*NSEC_PER_SEC),dispatch_get_main_queue(),^{
-            NGSystemDock *dock=objc_getAssociatedObject(host,&NGDockAssociation); collapsedOK=!collapse || (dock.collapsed && !dock.collapsePlatter.hidden && dock.searchKey.alpha<0.01 && fabs(dock.viewControllers[dock.selectedIndex].tabBarItem.image.size.width-26)<0.01);
+            NGSystemDock *dock=objc_getAssociatedObject(host,&NGDockAssociation); collapsedOK=!collapse || (dock.collapsed && !dock.collapsePlatter.hidden && dock.searchKey.alpha<0.01 && fabs(dock.viewControllers[dock.selectedIndex].tabBarItem.image.size.width-(NGDockAvatarEnabled() && collapse==3 ? 38 : 26))<0.01);
             NGSmokeImage(self.window,@"dock-native-003.png");
             if (collapse) [dock setCollapsed:NO];
             if ([arguments containsObject:@"--search-native"]) { host.selectedIndex=3; [dock searchTapped]; }
@@ -1111,7 +1120,8 @@ static void NGWriteTestResult(NSDictionary *result) {
     }
 
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.25 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [NSUserDefaults.standardUserDefaults setBool:YES forKey:NGPreferenceHUD];
+        // Feature tests opt in explicitly; startup defaults are tested separately.
+        for (NSString *key in @[NGPreferenceHUD,NGPreferenceDock,NGPreferencePlaybackGlass,NGPreferencePlaybackHeaderGlass,NGPreferenceCollectionGlass,NGPreferenceShareGlass,NGPreferenceShareGlassClear]) [NSUserDefaults.standardUserDefaults setBool:YES forKey:key];
         NGStart();
     });
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.25 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
@@ -1194,6 +1204,11 @@ static void NGWriteTestResult(NSDictionary *result) {
             @"corners003": NGTestCorners003(),
             @"iconStates003": NGTestIconStates003(),
             @"dock003": NGTestDock003(),
+            @"dockColors005": NGTestDockColors005(),
+            @"dockActions005": NGTestDockActions005(),
+            @"fullscreenTransitions005": NGTestFullscreenTransitions005(),
+            @"speedGlass005": NGTestSpeedGlass005(),
+            @"dockHaptics005": NGTestDockHaptics005(),
             @"episodeToolbar": NGTestEpisodeToolbar(),
             @"dockColors": NGTestDockColors(),
             @"statusBarRouting": NGTestStatusBarRouting(),
@@ -1237,10 +1252,10 @@ static void NGWriteTestResult(NSDictionary *result) {
 
 int main(int argc, char *argv[]) {
     @autoreleasepool {
-        [NSUserDefaults.standardUserDefaults removePersistentDomainForName:NSBundle.mainBundle.bundleIdentifier];
+        BOOL retained=[NSProcessInfo.processInfo.arguments containsObject:@"--retained-defaults005"];
+        if (!retained) [NSUserDefaults.standardUserDefaults removePersistentDomainForName:NSBundle.mainBundle.bundleIdentifier];
         NGTestFrameworkOriginalInfo = [[NSBundle bundleForClass:UIView.class].infoDictionary copy];
         [NSUserDefaults.standardUserDefaults setObject:@"original" forKey:NGPreferencePlaybackPreset];
-        [NSUserDefaults.standardUserDefaults setBool:NO forKey:NGPreferenceRuntimeGlass];
         NGPrepareRuntimeGlass();
         return UIApplicationMain(argc, argv, nil, NSStringFromClass(NGTestAppDelegate.class));
     }

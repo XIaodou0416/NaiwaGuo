@@ -67,22 +67,19 @@ static NSDictionary *NGTestDockColors(void) {
 }
 
 static NSDictionary *NGTestStatusBarRouting(void) {
-    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
-    BOOL saved = [defaults boolForKey:NGPreferenceHideStatusBar]; UIWindow *previous = NGBaseWindow();
-    FQVShortVideoListViewController *player = [FQVShortVideoListViewController new];
-    FQVShortVideoPlayerCellView *surface = [[FQVShortVideoPlayerCellView alloc] initWithFrame:CGRectMake(0, 0, 402, 874)]; [player.view addSubview:surface];
-    SSRootViewController *root = [[SSRootViewController alloc] initWithRootViewController:player];
-    UIWindow *window = [[UIWindow alloc] initWithWindowScene:previous.windowScene]; window.rootViewController = root; [window makeKeyAndVisible];
-    [root.view setNeedsLayout]; [root.view layoutIfNeeded]; [player.view layoutIfNeeded];
-    NGInstallPlaybackStatusBarHooks(); [defaults setBool:YES forKey:NGPreferenceHideStatusBar]; NGUpdatePlaybackStatusBar();
-    BOOL routed = root.prefersStatusBarHidden && !root.childViewControllerForStatusBarHidden && player.prefersStatusBarHidden;
-    [defaults setBool:NO forKey:NGPreferenceHideStatusBar]; NGUpdatePlaybackStatusBar();
-    BOOL restored = !root.prefersStatusBarHidden && root.childViewControllerForStatusBarHidden == player && !player.prefersStatusBarHidden;
-    [defaults setBool:YES forKey:NGPreferenceHideStatusBar];
-    NGSettingsViewController *settings = [NGSettingsViewController new]; [root pushViewController:settings animated:NO]; NGUpdatePlaybackStatusBar();
-    BOOL settingsVisible = !root.prefersStatusBarHidden && root.childViewControllerForStatusBarHidden == settings;
-    window.hidden = YES; [previous makeKeyWindow]; [defaults setBool:saved forKey:NGPreferenceHideStatusBar]; NGUpdatePlaybackStatusBar();
-    return @{@"rootAndPlayerOverrides": @(routed), @"restoresOriginalRouting": @(restored), @"settingsKeepsStatusBar": @(settingsVisible)};
+    NSUserDefaults *defaults=NSUserDefaults.standardUserDefaults; NSString *key=@"com.naiwaguo.playback.hideStatus";
+    id saved=[defaults objectForKey:key]; UIWindow *previous=NGBaseWindow();
+    FQVShortVideoListViewController *player=[FQVShortVideoListViewController new];
+    SSRootViewController *root=[[SSRootViewController alloc] initWithRootViewController:player];
+    UIWindow *window=[[UIWindow alloc] initWithWindowScene:previous.windowScene]; window.rootViewController=root; [window makeKeyAndVisible];
+    [defaults setBool:YES forKey:key];
+    BOOL native=!root.prefersStatusBarHidden && root.childViewControllerForStatusBarHidden==player && !player.prefersStatusBarHidden;
+    NGRemoveRetiredPlaybackPreferences(defaults); BOOL migrated=[defaults objectForKey:key]==nil;
+    BOOL absent=YES; for (NSDictionary *group in NGSettingsGroups()) for (NSDictionary *row in group[@"rows"]) absent &= ![row[@"key"] isEqual:key] && ![row[@"title"] containsString:@"隐藏系统"];
+    NGSettingsViewController *settings=[NGSettingsViewController new]; [root pushViewController:settings animated:NO];
+    BOOL settingsVisible=!root.prefersStatusBarHidden && root.childViewControllerForStatusBarHidden==settings;
+    window.hidden=YES; [previous makeKeyWindow]; if (saved) [defaults setObject:saved forKey:key];
+    return @{@"legacyEnabledValueCannotHideStatusBar":@(native),@"legacyPreferenceRemoved":@(migrated),@"settingRemoved":@(absent),@"hostStatusRoutingPreserved":@(settingsVisible)};
 }
 
 static NSDictionary *NGTestMorePanelGlass(void) {

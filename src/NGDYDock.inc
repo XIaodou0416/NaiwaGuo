@@ -25,7 +25,9 @@ static void NGDockInstallPlatterHooks(void);
 @property(nonatomic) NSInteger collapseSide;
 @property(nonatomic,strong) UIVisualEffectView *searchKey;
 @property(nonatomic,strong) UIButton *searchHit;
+@property(nonatomic,strong) UISelectionFeedbackGenerator *tapFeedback;
 @property(nonatomic,strong) UIImageView *searchIcon;
+@property(nonatomic,copy) NSString *actionAppearanceKey;
 @property(nonatomic,strong) UIPanGestureRecognizer *collapsePan;
 @property(nonatomic,weak) UIView *platter;
 @property(nonatomic,weak) UIView *collapsePlatter;
@@ -107,6 +109,7 @@ static BOOL NGDockMeasure(NGSystemDock *dock,UIView *platter) {
     dock.metrics=m; return changed;
 }
 static BOOL NGDockInvokeNativeSearch(UITabBarController *host);
+static BOOL NGDockInvokeAction(NGSystemDock *dock);
 @implementation NGDockSurface
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
     if (self.hidden || self.alpha<0.01 || !self.userInteractionEnabled) return nil;
@@ -157,18 +160,48 @@ static BOOL NGDockInvokeNativeSearch(UITabBarController *host);
     if (self.systemHost) { if (self.systemHost.selectedIndex!=index) self.systemHost.selectedIndex=index; }
     else if (self.tabBar.selectedItem!=self.viewControllers[index].tabBarItem) self.tabBar.selectedItem=self.viewControllers[index].tabBarItem;
 }
+- (void)playTapFeedback {
+    if (!self.host || !self.view.window || self.view.hidden || self.view.alpha<0.01 ||
+        ![NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceDock] ||
+        ![NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceDockHaptics]) return;
+    if (!self.tapFeedback) self.tapFeedback=[UISelectionFeedbackGenerator new];
+    [self.tapFeedback selectionChanged];
+    [self.tapFeedback prepare];
+}
 - (void)selectPage:(NSUInteger)index {
     if (index>=self.viewControllers.count) return;
-    if (index<self.buttons.count) [self.buttons[index] sendActionsForControlEvents:UIControlEventTouchUpInside];
+    if (index<self.buttons.count) {
+        if (!self.buttons[index].enabled) return;
+        [self playTapFeedback];
+        [self.buttons[index] sendActionsForControlEvents:UIControlEventTouchUpInside];
+    }
     self.selectedIndex=index;
 }
 - (void)tabBar:(UITabBar *)bar didSelectItem:(UITabBarItem *)item { NSUInteger index=[bar.items indexOfObject:item]; if (index!=NSNotFound) [self selectPage:index]; }
 - (BOOL)tabBarController:(UITabBarController *)controller shouldSelectViewController:(UIViewController *)page { NSUInteger index=[self.viewControllers indexOfObject:page]; if (index==NSNotFound) return NO; [self selectPage:index]; return YES; }
 - (void)refreshImages {
     if (self.inkStyle==UIUserInterfaceStyleUnspecified) self.inkStyle=self.traitCollection.userInterfaceStyle;
+    self.tabBar.tintColor = NGDockColor(YES,self.inkStyle);
+    self.tabBar.unselectedItemTintColor = NGDockColor(NO,self.inkStyle);
+    self.searchIcon.tintColor = NGDockColor(YES,self.inkStyle);
+    NSUInteger actionIndex=[NGDockActions() indexOfObject:NGDockAction()]; UIImage *avatar=NGDockCurrentAvatar();
+    NSString *appearance=[NSString stringWithFormat:@"%@|%d|%p",NGDockAction(),NGDockAvatarEnabled(),avatar];
+    if (![self.actionAppearanceKey isEqual:appearance]) {
+        self.actionAppearanceKey=appearance;
+        self.searchIcon.image=avatar ?: [UIImage systemImageNamed:NGDockAvatarEnabled() ? @"person.crop.circle" : NGDockActionSymbols()[actionIndex] withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:28 weight:UIImageSymbolWeightMedium]];
+        self.searchHit.accessibilityLabel=NGDockActionTitles()[actionIndex];
+    }
     for (NSUInteger index=0;index<self.viewControllers.count;index++) {
         NSUInteger source=index<self.sourceIndexes.count ? self.sourceIndexes[index].unsignedIntegerValue : index; UITabBarItem *item=self.viewControllers[index].tabBarItem;
-        if (self.collapsed && index==self.selectedIndex) { UIImage *icon=NGDockIcon(source,YES); CGFloat side=NGDockContentMode()==2 ? 24 : 26; UIImage *image=NGIconImageOnCanvas(icon,side,side); if (image.renderingMode!=UIImageRenderingModeAlwaysOriginal) image=[image imageWithTintColor:NGDockColor(YES,self.inkStyle) renderingMode:UIImageRenderingModeAlwaysOriginal]; item.image=image; item.selectedImage=image; }
+        if (self.collapsed && index==self.selectedIndex) {
+            BOOL accountAvatar=self.collapseSide==3 && NGDockAvatarEnabled();
+            UIImage *icon=accountAvatar ? (NGDockCurrentAvatar() ?: [UIImage systemImageNamed:@"person.crop.circle"]) : NGDockIcon(source,YES);
+            CGFloat side=accountAvatar ? 38 : (NGDockContentMode()==2 ? 24 : 26);
+            // Apply symbol ink before rasterizing; uploaded photos retain their colors.
+            if (icon.renderingMode!=UIImageRenderingModeAlwaysOriginal) icon=[icon imageWithTintColor:NGDockColor(YES,self.inkStyle) renderingMode:UIImageRenderingModeAlwaysOriginal];
+            UIImage *image=[NGIconImageOnCanvas(icon,side,side) imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+            item.image=image; item.selectedImage=image;
+        }
         else NGDockApplyRenderedImages(item,source,self.inkStyle);
     }
 }
@@ -203,12 +236,12 @@ static BOOL NGDockInvokeNativeSearch(UITabBarController *host);
         if (!CGPointEqualToPoint(barHost.center,center)) barHost.center=center;
         CGAffineTransform transform=CGAffineTransformMakeScale(scale,scale); if (!CGAffineTransformEqualToTransform(barHost.transform,transform)) barHost.transform=transform;
         if (self.collapsePlatter) {
-            CGFloat side=self.metrics.height,x=self.collapseSide==2 ? size.width-self.metrics.inset-side*scale : self.metrics.inset;
+            CGFloat side=self.metrics.height,x=self.collapseSide==3 ? (size.width-side*scale)/2 : (self.collapseSide==2 ? size.width-self.metrics.inset-side*scale : self.metrics.inset);
             self.collapseFrame=CGRectMake(capsuleX+(x-left)/scale,self.metrics.top,side,side);
             if (!CGRectEqualToRect(self.collapsePlatter.frame,self.collapseFrame)) self.collapsePlatter.frame=self.collapseFrame;
         }
         CGRect keyFrame=CGRectMake(left+capsule*scale+12,bottom-diameter,diameter,diameter); if (!CGRectEqualToRect(self.searchKey.frame,keyFrame)) self.searchKey.frame=keyFrame;
-        self.searchIcon.frame=CGRectInset(self.searchKey.bounds,14*NGDockSize(NGPreferenceDockSearchSize),14*NGDockSize(NGPreferenceDockSearchSize)); self.searchHit.frame=self.searchKey.bounds;
+        CGFloat iconInset=NGDockAvatarEnabled() ? 7 : 14; self.searchIcon.frame=CGRectInset(self.searchKey.bounds,iconInset*NGDockSize(NGPreferenceDockSearchSize),iconInset*NGDockSize(NGPreferenceDockSearchSize)); self.searchIcon.layer.cornerRadius=NGDockAvatarEnabled() ? self.searchIcon.bounds.size.width/2 : 0; self.searchIcon.clipsToBounds=NGDockAvatarEnabled(); self.searchHit.frame=self.searchKey.bounds;
         if (self.searchKey.alpha!=(self.collapsed ? 0 : 1)) self.searchKey.alpha=self.collapsed ? 0 : 1;
     } @finally { self.layingOut=NO; }
 }
@@ -232,7 +265,7 @@ static BOOL NGDockInvokeNativeSearch(UITabBarController *host);
     return NO;
 }
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)recognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)other { return YES; }
-- (void)searchTapped { if (self.host) NGDockInvokeNativeSearch(self.host); }
+- (void)searchTapped { if (self.searchHit.enabled && self.host && NGDockInvokeAction(self)) [self playTapFeedback]; }
 - (void)dealloc { [self.collapsePan.view removeGestureRecognizer:self.collapsePan]; for (UIView *p in @[self.platter ?: [UIView new],self.collapsePlatter ?: [UIView new]]) objc_setAssociatedObject(p,&NGDockPlatterOwnerKey,nil,OBJC_ASSOCIATION_ASSIGN); }
 @end
 static void NGDockInstallPlatterHooks(void) {

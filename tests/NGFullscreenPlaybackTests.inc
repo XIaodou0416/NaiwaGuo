@@ -89,7 +89,8 @@ static NSDictionary *NGTestFullscreenPlayback(void) {
     NGInstallPlaybackFullscreenHooks(); NGUpdatePlaybackFullscreen();
     CGRect expanded = [feed convertRect:feed.bounds toView:window], video = [render convertRect:render.bounds toView:window];
     CGRect square = [render convertRect:CGRectMake(10, 10, 20, 20) toView:window];
-    BOOL covers = NGFSNear(expanded.size.height, full) && video.origin.y <= 0.5 && CGRectGetMaxY(video) >= full - 0.5 && video.size.width >= window.bounds.size.width;
+    BOOL covers = NGFSNear(expanded.size.height, full);
+    BOOL fits = NGFSNear(video.size.width,window.bounds.size.width) && NGFSNear(video.size.height,nativeRender.size.height) && NGFSNear(CGRectGetMidY(video),native/2) && NGFSNear(video.origin.x,0);
     BOOL ratio = NGFSNear(square.size.width, square.size.height);
     BOOL geometry = NGFSNear(feed.bounds.size.height, native) && NGFSNear(feed.contentSize.height, native * 5) && feed.contentOffset.y == 0;
     CGRect hudAfter = [hud convertRect:hud.bounds toView:window];
@@ -101,7 +102,7 @@ static NSDictionary *NGTestFullscreenPlayback(void) {
         feed.frame = CGRectMake(0, 0, window.bounds.size.width, native);
         render.frame = nativeRender; hud.frame = CGRectMake(0, 0, window.bounds.size.width, native);
         [feed setNeedsLayout]; [feed layoutIfNeeded];
-        repeated &= NGFSNear(feed.bounds.size.height, native) && NGFSNear([render convertRect:render.bounds toView:window].size.height, full);
+        repeated &= NGFSNear(feed.bounds.size.height, native) && NGFSNear([render convertRect:render.bounds toView:window].size.height, nativeRender.size.height);
     }
     feed.frame = feed.frame; render.frame = render.frame; hud.frame = hud.frame;
     BOOL noOpWrites = NGFSNear(feed.bounds.size.height, native) && NGFSNear(render.bounds.size.height, nativeRender.size.height);
@@ -110,17 +111,26 @@ static NSDictionary *NGTestFullscreenPlayback(void) {
     render.center = CGPointMake(window.bounds.size.width / 2, native / 2);
     BOOL newAspect = NGFSNear([render convertRect:render.bounds toView:window].size.height, full);
     render.frame = nativeRender;
-    BOOL returningAspect = NGFSNear([render convertRect:render.bounds toView:window].size.height, full);
-    // A legacy separate landscape preference must no longer defeat full-screen.
+    BOOL returningAspect = NGFSNear([render convertRect:render.bounds toView:window].size.height, nativeRender.size.height);
+    // Retired landscape preference cannot restore unwanted cropping.
     [defaults setBool:NO forKey:@"com.naiwaguo.playback.fullscreenLandscape"]; NGUpdatePlaybackFullscreen();
-    BOOL landscapeIntegrated = NGFSNear([render convertRect:render.bounds toView:window].size.height, full);
+    BOOL landscapeIntegrated = NGFSNear([render convertRect:render.bounds toView:window].size.height, nativeRender.size.height);
+    [defaults setBool:YES forKey:@"com.naiwaguo.playback.fullscreenLandscape"]; NGUpdatePlaybackFullscreen();
+    landscapeIntegrated &= NGFSNear([render convertRect:render.bounds toView:window].size.height, nativeRender.size.height);
+    BOOL wideAndSquare=YES;
+    for (NSNumber *aspect in @[@1,@(21.0/9.0)]) {
+        CGFloat h=window.bounds.size.width/aspect.doubleValue; render.frame=CGRectMake(0,(native-h)/2,window.bounds.size.width,h);
+        CGRect result=[render convertRect:render.bounds toView:window];
+        wideAndSquare &= NGFSNear(result.size.width,window.bounds.size.width) && NGFSNear(result.size.height,h) && NGFSNear(CGRectGetMidY(result),native/2);
+    }
+    render.frame=nativeRender;
     BOOL pages = YES;
     for (NSNumber *index in @[@2, @4, @0]) {
         NSIndexPath *path = [NSIndexPath indexPathForItem:index.integerValue inSection:0];
         [feed scrollToItemAtIndexPath:path atScrollPosition:UICollectionViewScrollPositionTop animated:NO]; [feed layoutIfNeeded];
         UICollectionViewCell *page = [feed cellForItemAtIndexPath:path]; UIView *surface = [page viewWithTag:7402];
         CGRect rect = [surface convertRect:surface.bounds toView:window];
-        pages &= surface && NGFSNear(feed.contentOffset.y, native * index.integerValue) && NGFSNear(rect.origin.y, 0) && NGFSNear(rect.size.height, full);
+        pages &= surface && NGFSNear(feed.contentOffset.y, native * index.integerValue) && NGFSNear(CGRectGetMidY(rect), native/2) && NGFSNear(rect.size.height, nativeRender.size.height) && NGFSNear(rect.size.width,window.bounds.size.width);
     }
     [feed setContentOffset:CGPointMake(0, native * 0.25)]; [feed layoutIfNeeded];
     CGRect partial = [[feed cellForItemAtIndexPath:first] convertRect:[feed cellForItemAtIndexPath:first].bounds toView:window];
@@ -130,7 +140,7 @@ static NSDictionary *NGTestFullscreenPlayback(void) {
     UIView *parent = render.superview; [render removeFromSuperview];
     BOOL detached = CGAffineTransformIsIdentity(render.transform);
     TTPlayerView *replacement = [[TTPlayerView alloc] initWithFrame:nativeRender]; replacement.tag = 7402; [parent addSubview:replacement]; [replacement layoutIfNeeded];
-    BOOL replacementWorks = NGFSNear([replacement convertRect:replacement.bounds toView:window].size.height, full);
+    BOOL replacementWorks = NGFSNear([replacement convertRect:replacement.bounds toView:window].size.height, nativeRender.size.height);
     [defaults setBool:NO forKey:NGPreferencePlaybackFullscreen]; NGUpdatePlaybackFullscreen();
     BOOL restores = CGAffineTransformIsIdentity(feed.transform) && CGAffineTransformIsIdentity(replacement.transform) && CGRectEqualToRect(replacement.frame, nativeRender) && NGFSNear(feed.frame.size.height, native) && NGFSNear(feed.contentSize.height, native * 5);
     // A tall portrait render fills the same viewport with equal X/Y scaling.
@@ -147,10 +157,10 @@ static NSDictionary *NGTestFullscreenPlayback(void) {
     [defaults setBool:NO forKey:NGPreferencePlaybackFullscreen]; NGUpdatePlaybackFullscreen();
     window.hidden = YES; [previous makeKeyWindow];
     [defaults setBool:enabled forKey:NGPreferencePlaybackFullscreen]; [defaults removeObjectForKey:@"com.naiwaguo.playback.fullscreenLandscape"]; NGUpdatePlaybackFullscreen();
-    return @{@"coversReservedBottom": @(covers), @"uniformVideoScale": @(ratio), @"nativePagingGeometry": @(geometry),
+    return @{@"backgroundCoversReservedBottom": @(covers), @"landscapeCompleteFrameWithoutCrop":@(fits), @"squareAndUltrawideFit":@(wideAndSquare), @"uniformVideoScale": @(ratio), @"nativePagingGeometry": @(geometry),
              @"noOpFrameWrites": @(noOpWrites), @"decoderAspectChanges": @(newAspect && returningAspect),
-             @"nativeHUDAndTouches": @(controls), @"hundredHostRewrites": @(repeated), @"landscapeIntegratedIntoFullscreen": @(landscapeIntegrated),
+             @"nativeHUDAndTouches": @(controls), @"hundredHostRewrites": @(repeated), @"legacyLandscapeValueCannotCrop": @(landscapeIntegrated),
              @"firstMiddleLastPages": @(pages), @"fractionalSwipeRemainsAligned": @(swiping), @"detachedRenderRestores": @(detached),
-             @"lateReplacementFills": @(replacementWorks), @"disableRestores": @(restores), @"portraitFills": @(portrait),
+             @"lateReplacementKeepsAspect": @(replacementWorks), @"disableRestores": @(restores), @"portraitFills": @(portrait),
              @"overlayWindowExcluded": @(overlayExcluded), @"unrelatedViewsUnchanged": @(unrelatedUnchanged)};
 }

@@ -105,6 +105,7 @@ cp "$CONTAINER/Documents/header.png" "$RESULT_DIR/header.png"
 for name in fullscreen-before.png fullscreen-after.png fullscreen-portrait.png mall-underlay-075.png mine-underlay-075.png; do
   cp "$CONTAINER/Documents/$name" "$RESULT_DIR/$name"
 done
+cp "$CONTAINER/Documents/"dock-colors-005-*.png "$RESULT_DIR/"
 python3 - <<'PY'
 import json
 import pathlib
@@ -114,7 +115,7 @@ root = pathlib.Path('dist/simulator-validation')
 result = json.loads((root / 'result.json').read_text())
 assert all(result['nativeSettings'].values()), result['nativeSettings']
 assert all(result['dock'].values()), result['dock']
-for feature in ['episodeToolbar', 'dockColors', 'statusBarRouting', 'morePanelGlass', 'dramaTitle', 'shareIconReuse', 'thumbnailRepaint', 'dockAspectAndPreview', 'openingAnimation', 'settings001', 'corners002', 'shareRepaint002', 'typography002', 'search002', 'typography003', 'corners003', 'iconStates003', 'dock003', 'fullscreenPlayback', 'collection075', 'review075', 'underlay075', 'settings075', 'backdrop075']:
+for feature in ['episodeToolbar', 'dockColors', 'statusBarRouting', 'morePanelGlass', 'dramaTitle', 'shareIconReuse', 'thumbnailRepaint', 'dockAspectAndPreview', 'openingAnimation', 'settings001', 'corners002', 'shareRepaint002', 'typography002', 'search002', 'typography003', 'corners003', 'iconStates003', 'dock003', 'dockColors005', 'dockActions005', 'fullscreenTransitions005', 'speedGlass005', 'dockHaptics005', 'fullscreenPlayback', 'collection075', 'review075', 'underlay075', 'settings075', 'backdrop075']:
     assert all(result[feature].values()), result[feature]
 assert all(result['playbackPresets'].values()), result['playbackPresets']
 assert all(result['commentGlass'].values()), result['commentGlass']
@@ -122,7 +123,7 @@ assert all(result['shareGlass'].values()), result['shareGlass']
 assert all(result['headerRestore'].values()), result['headerRestore']
 assert result['fullscreenPreview']['fullscreenSettingPresent'], result['fullscreenPreview']
 assert result['fullscreenPreview']['geometryUnchanged'], result['fullscreenPreview']
-assert result['fullscreenPreview']['statusPlaybackDetected'], result['fullscreenPreview']
+assert result['fullscreenPreview']['playbackDetected'], result['fullscreenPreview']
 assert result['fullscreenPreview']['previewPresented'] and result['fullscreenPreview']['previewDismissed'], result['fullscreenPreview']
 assert result['fullscreenPreview']['previewDragHandle'] and result['fullscreenPreview']['previewMovesAndPersists'], result['fullscreenPreview']
 assert result['fullscreenPreview']['previewSliderCount'] == 15
