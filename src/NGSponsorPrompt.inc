@@ -1,4 +1,7 @@
 static NSString *const NGPreferenceSponsorNever = @"com.naiwaguo.prompts.sponsorNever";
+#if NG_TEST
+static BOOL NGSponsorTestPrompts;
+#endif
 static NSString *const NGSponsorPromptMessage = @"可以请我喝杯奶茶吗，为了以后的更新和体验🥹如果你不想看见点击下面弹窗以后不会再弹出来🙏抱歉<(_ _)>";
 @interface NGSponsorPromptController : UIViewController
 @property(nonatomic,strong) UIVisualEffectView *card;

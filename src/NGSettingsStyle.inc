@@ -16,6 +16,20 @@ static UIFont *NGSettingsFont(CGFloat size, UIFontWeight weight) {
 }
 static void NGSettingsFeedback(void) { [[[UISelectionFeedbackGenerator alloc] init] selectionChanged]; }
 
+static UIImage *NGSettingsIcon(UIImage *symbol,UIColor *color,CGFloat side) {
+    if (!symbol) return nil;
+    UIColor *fill=color ?: UIColor.systemBlueColor;
+    UIImageSymbolConfiguration *configuration=[UIImageSymbolConfiguration configurationWithPointSize:side*.54 weight:UIImageSymbolWeightSemibold];
+    UIImage *glyph=[[symbol imageByApplyingSymbolConfiguration:configuration] imageWithTintColor:UIColor.whiteColor renderingMode:UIImageRenderingModeAlwaysOriginal];
+    UIGraphicsImageRenderer *renderer=[[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(side,side)];
+    UIImage *image=[renderer imageWithActions:^(UIGraphicsImageRendererContext *context){
+        [fill setFill]; [[UIBezierPath bezierPathWithRoundedRect:CGRectMake(0,0,side,side) cornerRadius:8] fill];
+        CGFloat scale=MIN(side*.58/MAX(1,glyph.size.width),side*.58/MAX(1,glyph.size.height)); CGSize size=CGSizeMake(glyph.size.width*scale,glyph.size.height*scale);
+        [glyph drawInRect:CGRectMake((side-size.width)/2,(side-size.height)/2,size.width,size.height)];
+    }];
+    return [image imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+}
+
 #if NG_TEST
 static BOOL NGTestSettingsReduceMotion = NO;
 #endif
@@ -106,7 +120,7 @@ static BOOL NGSettingsMotionEnabled(void) {
     }
     void (^restore)(void) = ^{
         header.alpha = 1; header.transform = CGAffineTransformIdentity;
-        for (UITableViewCell *cell in cells) { cell.contentView.alpha = cell.userInteractionEnabled ? 1 : .38; cell.contentView.transform = CGAffineTransformIdentity; }
+        for (UITableViewCell *cell in cells) { cell.contentView.alpha = 1; cell.contentView.transform = CGAffineTransformIdentity; }
     };
     BOOL scheduled = [transition animateAlongsideTransition:^(id<UIViewControllerTransitionCoordinatorContext> context) {
         [UIView animateWithDuration:0.48 delay:0 usingSpringWithDamping:0.9 initialSpringVelocity:0.25 options:UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionAllowUserInteraction animations:restore completion:nil];
@@ -120,6 +134,7 @@ static BOOL NGSettingsMotionEnabled(void) {
     if ([cell.accessibilityIdentifier hasPrefix:@"NaiwaGuo.Settings.Group."]) { cell.backgroundConfiguration = [UIBackgroundConfiguration clearConfiguration]; return; }
     cell.textLabel.font = NGSettingsFont(15,UIFontWeightMedium); cell.textLabel.adjustsFontForContentSizeCategory = YES; cell.textLabel.numberOfLines = 0;
     cell.detailTextLabel.font = NGSettingsFont(12,UIFontWeightRegular); cell.detailTextLabel.textColor = NGSettingsMuted(); cell.detailTextLabel.numberOfLines = 0;
+    if (cell.imageView.image.isSymbolImage && cell.imageView.image.renderingMode!=UIImageRenderingModeAlwaysOriginal) cell.imageView.image=NGSettingsIcon(cell.imageView.image,cell.imageView.tintColor,30);
     cell.layoutMargins = UIEdgeInsetsMake(12,16,12,16); cell.tintColor = NGSettingsAccent();
     UIBackgroundConfiguration *background = [UIBackgroundConfiguration listGroupedCellConfiguration];
     background.backgroundColor = NGSettingsSurface(); background.cornerRadius = 16;

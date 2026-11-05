@@ -1,7 +1,8 @@
 {
-  "version": "0.0.8",
+  "version": "0.0.9",
+  "displayName": "奶蛙",
   "date": "2026-11-05",
-  "releaseStatus": "private candidate; source backup required; no public GitHub Release",
+  "releaseStatus": "private candidate; no public GitHub Release",
   "xcode": "27.0 (27A266a)",
   "sdk": "iOS 27.0",
   "simulator": "iPhone 18 Pro / iOS 27.0",
@@ -14,7 +15,7 @@
     "(undefined) weak external _OBJC_CLASS_$_UIGlassEffect (from UIKit)"
   ],
   "fullRegressionPassed": true,
-  "regressionSections": 49,
+  "regressionSections": 48,
   "featureAssertions": {
     "dockColors005": {
       "allThreeModesRetainNormalAndSelectedPixels": true,
@@ -120,39 +121,22 @@
       "preservesNativeHiddenState": true,
       "settingIsSearchable": true
     },
-    "authorAccess007": {
-      "confirmedFollowRequiresFreshQueryBeforeUnlock": true,
-      "failedFollowDoesNotUnlock": true,
-      "lockedFeatureListCannotNavigate": true,
-      "lockedReadsMaskFeaturesWithoutDeletingPreferences": true,
-      "lockedStartupPreservesAlreadyMigratedChoices": true,
-      "logoutLocksFeatures": true,
-      "mutualFollowIsAccepted": true,
-      "nativeQueryTargetsExactAuthor": true,
-      "networkWrongAuthorAndMalformedResponsesFailClosed": true,
-      "newSessionLocksBeforeNetworkResult": true,
-      "noFollowMutationBeforeConfirmation": true,
-      "relationListSchemaIsMatchedByAuthorID": true,
-      "runtimeDockLocksAndRestoresSavedChoice": true,
-      "staleAccountResponseCannotUnlock": true,
-      "timedOutResponseCannotUnlockLater": true,
-      "unfollowedStatesRelock": true
-    },
     "sponsorPrompt007": {
       "directCloseDoesNotPersistSuppression": true,
       "exactRequestedTextCodeAndButtons": true,
       "neverAgainPersistsSuppression": true,
       "smallPhoneAndTabletButtonsStayReachable": true
     },
-    "authorSelfAccess008": {
-      "accountChangeImmediatelyRevokesExemption": true,
-      "authorIDMustMatchExactly": true,
-      "authorUsesSavedFeaturesWithoutSelfFollowOrRelationNetwork": true,
-      "loggedOutAuthorIDDoesNotUnlock": true,
-      "nativeNumericAuthorIDIsAccepted": true,
-      "otherAccountStillRequiresFollow": true,
-      "recheckingAuthorDoesNotTemporarilyLock": true,
-      "staleOtherAccountResponseCannotRevokeAuthor": true
+    "settings009": {
+      "allCategoriesAvailableWithoutHostLogin": true,
+      "categoryIconsHaveFixedColoredTiles": true,
+      "chineseDisplayName": true,
+      "detailRowIconUsesNewStyle": true,
+      "eachCategoryIconIsDistinct": 1,
+      "featureNavigationAvailable": true,
+      "nativeEntryHasTextOnly": true,
+      "noAuthorizationBanner": 1,
+      "savedPreferencesReadWithoutMasking": true
     }
   },
   "searchNavigationCases": {
@@ -316,10 +300,10 @@
   "nativeUICases": {
     "font": {
       "passed": 1,
-      "durationSeconds": 4.801064166676952,
+      "durationSeconds": 4.800797333329683,
       "profileSettingsFontNavigationCycles": 10,
       "mainThreadHeartbeats": 40,
-      "maxHeartbeatGapSeconds": 0.12105933332350105
+      "maxHeartbeatGapSeconds": 0.12188612500904128
     },
     "regular": {
       "collapseSide": 0,
@@ -564,46 +548,40 @@
       }
     }
   },
-  "accessAndSponsorProcessCases": {
-    "access-preview007": {
-      "confirmedFollowUnlocksAfterQuery": true,
+  "settingsAndSponsorProcessCases": {
+    "settings-preview009": {
+      "featureNavigationAvailable": true,
       "passed": 1,
-      "explicitConfirmationBeforeMutation": true,
+      "allVisibleFeaturesEnabledWithoutLogin": true,
       "sponsorHasRequestedContent": true,
-      "lockedListStaysGreyAfterAnimation": true
+      "sponsorPreferenceCorrect": true
     },
-    "sponsor-never-seed007": {
+    "native-entry009": {
+      "entryOpensSettings": true,
       "passed": 1,
-      "neverAgainPreferenceRetained": true,
-      "authorizationIndependentFromDonation": true,
-      "noSponsorPresented": true
+      "textOnlyChineseEntry": true
     },
-    "sponsor-never-check007": {
+    "sponsor-never-seed009": {
+      "featureNavigationAvailable": true,
       "passed": 1,
-      "neverAgainPreferenceRetained": true,
-      "authorizationIndependentFromDonation": true,
-      "noSponsorPresented": true
+      "allVisibleFeaturesEnabledWithoutLogin": true,
+      "sponsorHasRequestedContent": true,
+      "sponsorPreferenceCorrect": true
     },
-    "access-restart007": {
-      "unfollowedRemainsLocked": 1,
+    "sponsor-never-check009": {
+      "savedSettingsRetained": true,
       "passed": 1,
-      "newProcessDoesNotReuseAuthorization": true
+      "noSponsorAfterNeverAgain": 1,
+      "featuresAvailableAfterRestartWithoutLogin": true
     },
-    "author-self008": {
-      "savedFeaturesAvailableAfterRestart": 1,
+    "unrestricted-restart009": {
+      "savedSettingsRetained": true,
       "passed": 1,
-      "noSelfFollowOrRelationQuery": true,
-      "authorSettingsUnlockedWithoutFollowPrompt": 1
-    },
-    "author-self-restart008": {
-      "savedFeaturesAvailableAfterRestart": 1,
-      "passed": 1,
-      "noSelfFollowOrRelationQuery": true,
-      "authorSettingsUnlockedWithoutFollowPrompt": 1
+      "noSponsorAfterNeverAgain": 1,
+      "featuresAvailableAfterRestartWithoutLogin": true
     }
   },
-  "authorFollowHostAdapterStaticInspection": true,
-  "authorFollowRealAccountServerTested": false,
+  "followGateCodeRemoved": true,
   "avatarAnimationEndMeasurements": {
     "avatar60": {
       "collapseSide": 3,
@@ -681,7 +659,7 @@
     "unknownActionDoesNotOpen": 1,
     "versionStartsAt001": true
   },
-  "settingsScreenshots": 23,
+  "settingsScreenshots": 21,
   "privateSourcePathAndSecretScanPassed": true,
   "physicalDeviceTested": false,
   "lowerIOSRuntimeTested": false,

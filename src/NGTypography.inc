@@ -215,7 +215,7 @@ static void NGInstallTypographyHooks(void) {
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)path {
     UITableViewCell *cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
     if (path.section==0) {
-        cell.textLabel.text=@"每一段故事，都值得细细看。"; cell.detailTextLabel.text=@"NaiwaGuo · Aa 0123456789"; cell.textLabel.font=[UIFont systemFontOfSize:18]; self.sample=cell.textLabel;
+        cell.textLabel.text=@"每一段故事，都值得细细看。"; cell.detailTextLabel.text=@"奶蛙 · Aa 0123456789"; cell.textLabel.font=[UIFont systemFontOfSize:18]; self.sample=cell.textLabel;
     } else if (path.section==1) {
         UILabel *value=[UILabel new]; value.text=[NSString stringWithFormat:@"%.0f%%",NGTypographyScale()*100]; value.font=[UIFont monospacedDigitSystemFontOfSize:14 weight:UIFontWeightMedium]; self.percentage=value;
         UISlider *slider=[UISlider new]; slider.minimumValue=0.5; slider.maximumValue=1; slider.value=NGTypographyScale(); slider.accessibilityLabel=@"全局字号比例"; slider.accessibilityIdentifier=NGPreferenceFontScale; [slider addTarget:self action:@selector(scaleChanged:) forControlEvents:UIControlEventValueChanged];

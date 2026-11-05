@@ -179,7 +179,7 @@ static void NGDStartExport(NGDDebugExportContext *context, NGDDebugExportMode mo
     // 探针读 UIKit，必须在主线程生成后塞进上下文；后台任务只做序列化与压缩。
     context.probeText = NGDTabBarProbeReport() ?: @"";
 
-    UIAlertController *progressAlert = [UIAlertController alertControllerWithTitle:@"NaiwaGuo"
+    UIAlertController *progressAlert = [UIAlertController alertControllerWithTitle:@"奶蛙"
                                                                            message:@"准备导出..."
                                                                     preferredStyle:UIAlertControllerStyleAlert];
     [presenter presentViewController:progressAlert animated:YES completion:^{
@@ -252,7 +252,7 @@ static void NGDEnsureDebugWindow(void) {
     self.wrenchButton.layer.shadowOpacity = 0.24;
     self.wrenchButton.layer.shadowRadius = 8;
     self.wrenchButton.layer.shadowOffset = CGSizeMake(0, 2);
-    self.wrenchButton.accessibilityLabel = @"NaiwaGuo 调试工具";
+    self.wrenchButton.accessibilityLabel = @"奶蛙 调试工具";
     self.wrenchButton.accessibilityIdentifier = @"NaiwaGuo.Debug.Button";
     [self.wrenchButton addGestureRecognizer:[[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(openPluginSettings:)]];
 
@@ -310,7 +310,7 @@ static void NGDEnsureDebugWindow(void) {
 - (void)showDebugMenu {
     if (!NGDPrefBool(NGDKeyDebugInspectorEnabled)) return;
 
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"NaiwaGuo Debug"
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"奶蛙调试工具"
                                                                    message:@"页面包可能包含截图与界面文字；音频包可能包含三秒播放声音。仅本地生成，由你选择分享。"
                                                             preferredStyle:UIAlertControllerStyleActionSheet];
     [alert addAction:[UIAlertAction actionWithTitle:@"导出本页 zip"
@@ -401,7 +401,7 @@ static void NGDEnsureDebugWindow(void) {
     NSMutableArray<NSDictionary *> *snapshots = [NSMutableArray arrayWithCapacity:3];
     [snapshots addObject:NGDAudioStampedMediaSnapshot(0)];
 
-    UIAlertController *progressAlert = [UIAlertController alertControllerWithTitle:@"NaiwaGuo 音频探针"
+    UIAlertController *progressAlert = [UIAlertController alertControllerWithTitle:@"奶蛙 音频探针"
                                                                            message:@"0/5 秒：稳定期，请保持当前播放状态"
                                                                     preferredStyle:UIAlertControllerStyleAlert];
     [self presentViewController:progressAlert animated:YES completion:nil];

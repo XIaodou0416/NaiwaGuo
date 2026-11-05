@@ -17,8 +17,8 @@ void NGDRegisterFLEXKingProvider(void);
 #import <sys/resource.h>
 #import <math.h>
 
-static NSString *const NGPluginName = @"NaiwaGuo";
-static NSString *const NGVersion = @"0.0.8";
+static NSString *const NGPluginName = @"奶蛙";
+static NSString *const NGVersion = @"0.0.9";
 static NSString *const NGHostBundleIdentifier = @"com.phoenix.video";
 static NSString *const NGHostExecutable = @"Eggplant";
 static NSString *const NGPrefix = @"com.naiwaguo.";
@@ -34,8 +34,6 @@ static NSString *const NGPreferenceChannelRestoreMigration = @"com.naiwaguo.migr
 static NSString *const NGPreferenceRuntimeGlass = @"com.naiwaguo.appearance.runtimeGlass";
 static NSString *const NGIdentifierPrefix = @"NaiwaGuo.";
 
-#include "NGAccessState.inc"
-#include "NGAuthorAccess.inc"
 
 static BOOL NGRuntimeGlassRequested;
 static BOOL NGRuntimeGlassHooksInstalled;
@@ -1825,9 +1823,7 @@ static void NGInstallNativeSettings(void) {
         entry.frame = CGRectMake(0, 0, header.bounds.size.width, 54);
         entry.autoresizingMask = UIViewAutoresizingFlexibleWidth;
         UIButtonConfiguration *config = [UIButtonConfiguration plainButtonConfiguration];
-        config.title = @"NaiwaGuo";
-        config.image = [UIImage systemImageNamed:@"slider.horizontal.3"];
-        config.imagePadding = 12;
+        config.title = NGPluginName;
         config.baseForegroundColor = UIColor.labelColor;
         config.background.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
         config.background.cornerRadius = 8;
@@ -1997,17 +1993,17 @@ static NSArray<NSArray<NSDictionary *> *> *NGPlaybackVisibilityItems(void) {
 
 static NSArray<NSDictionary *> *NGSettingsGroups(void) {
     return @[
-        @{@"title": @"播放布局", @"subtitle": @"元素显隐、位置与播放比例", @"symbol": @"rectangle.inset.filled", @"color": UIColor.systemIndigoColor, @"rows": @[
+        @{@"title": @"播放布局", @"subtitle": @"元素显隐、位置与播放比例", @"symbol": @"play.rectangle.fill", @"color": UIColor.systemBlueColor, @"rows": @[
             NGSettingRow(@"显示 / 隐藏播放页元素", @"头像、动作、顶部标签、视频信息", @"eye.slash", nil, @"playbackVisibility"),
             NGSettingRow(@"位置与大小调节", @"右侧整体、作者名、剧名、简介、声明", @"arrow.up.left.and.arrow.down.right", nil, @"playbackLayout"),
             NGSettingRow(@"全屏播放", @"去除底部预留黑边；宽屏保留原始大小", @"arrow.up.left.and.arrow.down.right", NGPreferencePlaybackFullscreen, nil)
         ]},
-        @{@"title": @"图标定制", @"subtitle": @"动作预设、底栏图标与相册图片", @"symbol": @"square.grid.2x2", @"color": UIColor.systemOrangeColor, @"rows": @[
+        @{@"title": @"图标定制", @"subtitle": @"动作预设、底栏图标与相册图片", @"symbol": @"square.grid.2x2.fill", @"color": UIColor.systemPinkColor, @"rows": @[
             NGSettingRow(@"右侧动作图标", @"收藏、评论、点赞、分享；支持相册上传", @"paintbrush.pointed", nil, @"playbackIconPresets"),
             NGSettingRow(@"底栏图标预设与自定义", @"单项上传图片或输入 SF Symbols", @"rectangle.bottomthird.inset.filled", nil, @"dockIcons"),
             NGSettingRow(@"隐藏底栏项目", @"", @"line.3.horizontal.decrease", nil, @"dockItems")
         ]},
-        @{@"title": @"液态外观", @"subtitle": @"玻璃材质、底栏颜色与面板", @"symbol": @"drop.halffull", @"color": UIColor.systemTealColor, @"rows": @[
+        @{@"title": @"液态外观", @"subtitle": @"玻璃材质、底栏颜色与面板", @"symbol": @"drop.fill", @"color": UIColor.systemTealColor, @"rows": @[
             NGSettingRow(@"底栏外观与收缩", @"清透、居中收缩、头像、按钮功能与震动反馈", @"rectangle.bottomthird.inset.filled", nil, @"dockAppearance"),
             NGSettingRow(@"底栏颜色", @"未选中与已选中", @"circle.lefthalf.filled", nil, @"dockColors"),
             NGSettingRow(@"顶部液态容器", @"频道、合集返回、倍速与更多", @"capsule", NGPreferencePlaybackHeaderGlass, nil),
@@ -2017,12 +2013,12 @@ static NSArray<NSDictionary *> *NGSettingsGroups(void) {
             NGSettingRow(@"分享、长按与倍速面板", @"清透玻璃、柔雾玻璃", @"square.and.arrow.up", nil, @"shareGlassStyle"),
             NGSettingRow(@"评论区玻璃透明度", @"滑动调节玻璃底色和文字对比度", @"slider.horizontal.3", nil, @"commentGlassOpacity"),
         ]},
-        @{@"title": @"工具与诊断", @"subtitle": @"页面结构、音频专项与问题采集", @"symbol": @"waveform.path.ecg", @"color": UIColor.systemRedColor, @"rows": @[
+        @{@"title": @"工具与诊断", @"subtitle": @"页面结构、音频专项与问题采集", @"symbol": @"wrench.and.screwdriver.fill", @"color": UIColor.systemOrangeColor, @"rows": @[
             NGSettingRow(@"调试工具", @"显示扳手入口；音频采集需开启后重启红果", @"wrench.fill", NGPreferenceHUD, nil),
             NGSettingRow(@"调试导出菜单", @"本页 ZIP / 音频专项 ZIP，分享前请检查隐私", @"square.and.arrow.up", nil, @"capture"),
             NGSettingRow(@"清除记录", @"", @"trash", nil, @"clearEvents")
         ]},
-        @{@"title": @"字体与字号", @"subtitle": @"原生文字缩放与自定义字体", @"symbol": @"textformat.size", @"color": UIColor.systemPurpleColor, @"rows": @[
+        @{@"title": @"字体与字号", @"subtitle": @"原生文字缩放与自定义字体", @"symbol": @"textformat", @"color": UIColor.systemPurpleColor, @"rows": @[
             NGSettingRow(@"全局字号与自定义字体", @"比例调节、已安装字体和字体文件导入", @"textformat.size", nil, @"typography")
         ]},
 
@@ -2030,8 +2026,7 @@ static NSArray<NSDictionary *> *NGSettingsGroups(void) {
 }
 
 static UIImage *NGSettingsTile(NSString *symbol, UIColor *color) {
-    UIImageSymbolConfiguration *configuration = [UIImageSymbolConfiguration configurationWithPointSize:23 weight:UIImageSymbolWeightRegular];
-    return [[UIImage systemImageNamed:symbol withConfiguration:configuration] imageWithTintColor:color ?: UIColor.systemBlueColor renderingMode:UIImageRenderingModeAlwaysOriginal];
+    return NGSettingsIcon([UIImage systemImageNamed:symbol],color,36);
 }
 
 @interface NGBrandHeaderView : UIView
@@ -2044,7 +2039,7 @@ static UIImage *NGSettingsTile(NSString *symbol, UIColor *color) {
 - (instancetype)initWithFrame:(CGRect)frame {
     if ((self=[super initWithFrame:frame])) {
         _iconView=[[UIImageView alloc] initWithImage:NGHostIcon()]; _iconView.layer.cornerRadius=10; _iconView.clipsToBounds=YES; [self addSubview:_iconView];
-        _titleLabel=[UILabel new]; _titleLabel.text=@"NaiwaGuo"; _titleLabel.font=NGSettingsFont(20,UIFontWeightSemibold); _titleLabel.textColor=NGSettingsInk(); [self addSubview:_titleLabel];
+        _titleLabel=[UILabel new]; _titleLabel.text=NGPluginName; _titleLabel.font=NGSettingsFont(20,UIFontWeightSemibold); _titleLabel.textColor=NGSettingsInk(); [self addSubview:_titleLabel];
         _subtitleLabel=[UILabel new]; _subtitleLabel.text=@"外观与观看体验"; _subtitleLabel.font=NGSettingsFont(12,UIFontWeightRegular); _subtitleLabel.textColor=NGSettingsMuted(); [self addSubview:_subtitleLabel];
         _badgeLabel=[UILabel new]; _badgeLabel.text=[@"v" stringByAppendingString:NGVersion]; _badgeLabel.font=[UIFont monospacedSystemFontOfSize:11 weight:UIFontWeightRegular]; _badgeLabel.textColor=NGSettingsMuted(); _badgeLabel.textAlignment=NSTextAlignmentRight; [self addSubview:_badgeLabel];
     } return self;
@@ -2076,7 +2071,7 @@ static UIImage *NGSettingsTile(NSString *symbol, UIColor *color) {
 }
 - (void)layoutSubviews {
     [super layoutSubviews]; _surface.frame=CGRectInset(self.contentView.bounds,0,1); CGFloat w=_surface.bounds.size.width,h=_surface.bounds.size.height;
-    _tile.frame=CGRectMake(16,(h-23)/2,23,23); CGFloat left=53, textWidth=MAX(0,w-left-32);
+    _tile.frame=CGRectMake(14,(h-36)/2,36,36); CGFloat left=64, textWidth=MAX(0,w-left-32);
     CGSize heading=[_heading sizeThatFits:CGSizeMake(textWidth,60)],summary=[_summary sizeThatFits:CGSizeMake(textWidth,80)]; CGFloat total=heading.height+4+summary.height;
     _heading.frame=CGRectMake(left,(h-total)/2,textWidth,heading.height); _summary.frame=CGRectMake(left,CGRectGetMaxY(_heading.frame)+4,textWidth,summary.height);
     _chevron.frame=CGRectMake(w-23,(h-12)/2,7,12);
@@ -2111,13 +2106,7 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
 @property(nonatomic, copy) NSDictionary *pendingSearchMatch;
 @property(nonatomic, strong) NGBrandHeaderView *brandHeader;
 @property(nonatomic, strong) UIView *supportFooter;
-@property(nonatomic,strong) UIButton *accessBanner;
-@property(nonatomic) BOOL followPromptShown;
 @property(nonatomic) BOOL sponsorPromptConsidered;
-@property(nonatomic) BOOL accessCheckedForEntry;
-- (void)refreshAccessUI;
-- (void)presentSettingsPrompts;
-- (void)checkAuthorAccess;
 - (void)showSponsorPromptIfNeeded;
 @end
 
@@ -2150,68 +2139,29 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
     self.groups = NGSettingsGroups();
     self.searchResults = @[];
     [self installSupportFooter];
-    self.accessBanner=[UIButton buttonWithType:UIButtonTypeSystem]; self.accessBanner.configuration=[UIButtonConfiguration tintedButtonConfiguration]; self.accessBanner.titleLabel.numberOfLines=2; self.accessBanner.titleLabel.textAlignment=NSTextAlignmentCenter; self.accessBanner.accessibilityIdentifier=@"NaiwaGuo.Access.Status";
-    [self.accessBanner addTarget:self action:@selector(checkAuthorAccess) forControlEvents:UIControlEventTouchUpInside]; [self.brandHeader addSubview:self.accessBanner];
-    [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(refreshAccessUI) name:NGAccessChangedNotification object:nil]; [self refreshAccessUI];
 }
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
     self.groups = NGSettingsGroups();
     [self.tableView reloadData];
-    [self refreshAccessUI];
 }
 - (void)viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated];
-    if (!self.accessCheckedForEntry) { self.accessCheckedForEntry=YES; NGAccessCheck(); }
-    [self presentSettingsPrompts];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(.4*NSEC_PER_SEC)),dispatch_get_main_queue(), ^{ [self showSponsorPromptIfNeeded]; });
 }
-- (void)dealloc { [NSNotificationCenter.defaultCenter removeObserver:self]; }
-- (void)refreshAccessUI {
-    if (!self.isViewLoaded) return;
-    BOOL allowed=NGAccessAllowed(); self.accessBanner.hidden=allowed;
-    [self.accessBanner setTitle:[NGAccessStatusText() stringByAppendingString:@"\n点此重新检测 / 关注作者"] forState:UIControlStateNormal];
-    self.accessBanner.enabled=NGAccessStatus!=NGAccessChecking;
-    self.navigationItem.searchController.searchBar.userInteractionEnabled=allowed; self.navigationItem.searchController.searchBar.alpha=allowed ? 1 : .4;
-    if (!allowed) {
-        self.pendingSearchMatch=nil; self.navigationItem.searchController.active=NO;
-        if ([self.navigationController.viewControllers containsObject:self] && self.navigationController.topViewController!=self) [self.navigationController popToViewController:self animated:NO];
-    }
-    [self.tableView reloadData]; [self.view setNeedsLayout];
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(.4*NSEC_PER_SEC)),dispatch_get_main_queue(), ^{ [self presentSettingsPrompts]; });
-}
-- (void)checkAuthorAccess { self.followPromptShown=NO; NGAccessCheck(); }
 - (void)showSponsorPromptIfNeeded {
 #if NG_TEST
-    if (!NGAccessTestPrompts) return;
+    if (!NGSponsorTestPrompts) return;
 #endif
     if (self.sponsorPromptConsidered || [NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceSponsorNever] || !self.view.window || self.navigationController.topViewController!=self || self.presentedViewController) return;
     self.sponsorPromptConsidered=YES; [self presentViewController:[NGSponsorPromptController new] animated:YES completion:nil];
-}
-- (void)presentSettingsPrompts {
-#if NG_TEST
-    if (!NGAccessTestPrompts) return;
-#endif
-    if (!self.view.window || self.navigationController.topViewController!=self || self.presentedViewController || self.isBeingDismissed || self.navigationController.isBeingDismissed) return;
-    if (NGAccessStatus==NGAccessChecking || NGAccessStatus==NGAccessUnknown) return;
-    if (!NGAccessAllowed() && !self.followPromptShown) {
-        self.followPromptShown=YES;
-        BOOL canFollow=NGAccessStatus==NGAccessNotFollowing;
-        NSString *message=canFollow ? [NSString stringWithFormat:@"使用插件前需要关注作者（红果用户 ID：%@）。是否确认关注？确认后会通过红果重新核验，未关注时功能列表保持灰色。",NGAuthorUserID] : [NGAccessStatusText() stringByAppendingString:@"。核验成功前，功能列表保持灰色。"];
-        UIAlertController *alert=[UIAlertController alertControllerWithTitle:canFollow ? @"关注作者后使用" : @"关注状态未确认" message:message preferredStyle:UIAlertControllerStyleAlert];
-        __weak typeof(self) weakSelf=self;
-        [alert addAction:[UIAlertAction actionWithTitle:canFollow ? @"暂不关注" : @"稍后再试" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action){ dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(.4*NSEC_PER_SEC)),dispatch_get_main_queue(),^{[weakSelf showSponsorPromptIfNeeded];}); }]];
-        [alert addAction:[UIAlertAction actionWithTitle:canFollow ? @"确认关注" : @"重新检测" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action){ if (canFollow) NGAccessFollowAuthor(); else { weakSelf.followPromptShown=NO; NGAccessCheck(); } }]];
-        [self presentViewController:alert animated:YES completion:nil]; return;
-    }
-    [self showSponsorPromptIfNeeded];
 }
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
     [self layoutSupportFooter];
     if (self.tableView.tableHeaderView == self.brandHeader) {
         CGFloat width = self.tableView.bounds.size.width;
-        CGFloat height = 80 + MAX(0,self.brandHeader.titleLabel.font.pointSize-20)*2 + (NGAccessAllowed() ? 0 : 76);
-        self.accessBanner.frame=CGRectMake(16,height-72,MAX(0,width-32),64);
+        CGFloat height = 80 + MAX(0,self.brandHeader.titleLabel.font.pointSize-20)*2;
         if (self.brandHeader.frame.size.width != width || self.brandHeader.frame.size.height != height) {
             self.brandHeader.frame = CGRectMake(0, 0, width, height);
             self.tableView.tableHeaderView = self.brandHeader;
@@ -2325,9 +2275,7 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
         NSDictionary *row = match[@"row"];
         cell.textLabel.text = row[@"title"];
         cell.detailTextLabel.text = [NSString stringWithFormat:@"%@ · %@", match[@"groupTitle"], row[@"subtitle"]];
-        cell.imageView.image = [UIImage systemImageNamed:row[@"symbol"] ?: @"gear"];
-        cell.imageView.tintColor = self.groups[[match[@"group"] unsignedIntegerValue]][@"color"] ?: UIColor.systemBlueColor;
-        if (!NGAccessAllowed() && ![@[@"sponsor",@"community"] containsObject:row[@"action"] ?: @""]) { cell.userInteractionEnabled=NO; cell.contentView.alpha=.38; cell.accessibilityTraits|=UIAccessibilityTraitNotEnabled; }
+        cell.imageView.image = NGSettingsIcon([UIImage systemImageNamed:row[@"symbol"] ?: @"gear"],self.groups[[match[@"group"] unsignedIntegerValue]][@"color"],30);
         return cell;
     }
     NSUInteger groupIndex = indexPath.section;
@@ -2340,14 +2288,12 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
     category.tile.tintColor = color;
     category.accessibilityLabel = [NSString stringWithFormat:@"%@，%@", group[@"title"], group[@"subtitle"]];
     category.accessibilityIdentifier = [NSString stringWithFormat:@"NaiwaGuo.Settings.Group.%lu", (unsigned long)indexPath.section];
-    if (!NGAccessAllowed()) { category.userInteractionEnabled=NO; category.contentView.alpha=.38; category.accessibilityTraits|=UIAccessibilityTraitNotEnabled; }
     return category;
 }
-- (NSIndexPath *)tableView:(UITableView *)tableView willSelectRowAtIndexPath:(NSIndexPath *)path { return NGAccessAllowed() ? path : nil; }
 - (void)openPendingSearchResult {
     NSDictionary *match = self.pendingSearchMatch;
     self.pendingSearchMatch = nil;
-    if (!NGAccessAllowed() || !match || self.navigationController.topViewController != self) return;
+    if (!match || self.navigationController.topViewController != self) return;
     NSUInteger groupIndex = [match[@"group"] unsignedIntegerValue];
     if (groupIndex >= self.groups.count) return;
     NSDictionary *row = match[@"row"];
@@ -2371,7 +2317,7 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
 }
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
-    if (!NGAccessAllowed() || self.pendingSearchMatch || self.navigationController.topViewController != self) return;
+    if (self.pendingSearchMatch || self.navigationController.topViewController != self) return;
     if ([self isSearching]) {
         if (indexPath.row < 0 || (NSUInteger)indexPath.row >= self.searchResults.count) return;
         self.pendingSearchMatch = self.searchResults[indexPath.row];
@@ -2430,8 +2376,7 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
     cell.textLabel.text = row[@"title"];
     cell.detailTextLabel.text = row[@"subtitle"];
     cell.detailTextLabel.numberOfLines = 0;
-    cell.imageView.image = [UIImage systemImageNamed:row[@"symbol"] ?: @"gear"];
-    cell.imageView.tintColor = self.group[@"color"] ?: UIColor.systemBlueColor;
+    cell.imageView.image = NGSettingsIcon([UIImage systemImageNamed:row[@"symbol"] ?: @"gear"],self.group[@"color"],30);
     NSString *key = row[@"key"];
     NSString *action = row[@"action"];
     if ([action isEqualToString:@"clearEvents"]) {
@@ -2550,7 +2495,6 @@ static void NGInstallLifecycleHooks(void) {
         }));
         [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidBecomeActiveNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
             NGLog(@"lifecycle", @"foreground", nil);
-            NGInstallAuthorAccessHooks(); NGAccessCheck();
             [NGPerformanceRecorder.shared resume];
             NGInstallOverlay();
             
@@ -2592,13 +2536,8 @@ static void NGRemoveRetiredPlaybackPreferences(NSUserDefaults *defaults) {
         [defaults removeObjectForKey:key];
 }
 
-static void NGRefreshAfterAccessChange(void) {
-    NGLoadTypographyFont(); NGRefreshTypography(); NGUpdateDock(); NGUpdatePlaybackGlass(); NGUpdatePlaybackHeaderGlass(); NGUpdateCommentGlass(); NGUpdatePlaybackFullscreen(); NGUpdatePlaybackTextLayout(); NGRefreshPlaybackCorners(); NGInstallOverlay(); NGDAudioProbePreferenceDidChange();
-}
-
 static void NGStart(void) {
     if (!NGIsHostApp()) return;
-    NGInstallAuthorAccessHooks();
     NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
     NGRemoveRetiredPlaybackPreferences(defaults);
     [defaults registerDefaults:@{
@@ -2640,7 +2579,7 @@ static void NGStart(void) {
 #endif
     NGDAudioHooksInstall(); NGDDebugInspectorInstall(); NGDRegisterFLEXKingProvider();
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.7 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        NGAccessCheck(); NGInstallOverlay();
+        NGInstallOverlay();
         
         NGInstallPlaybackGlassHook();
         NGUpdatePlaybackGlass();
@@ -2659,7 +2598,6 @@ static void NGStart(void) {
 #ifndef NG_TEST
 __attribute__((constructor)) static void NGNaiwaGuoEntry(void) {
     @autoreleasepool {
-        if (NGIsHostApp()) NGInstallAccessPreferenceHooks();
         NGPrepareRuntimeGlass();
         if (NGIsHostApp()) { NGDAudioHooksInstall(); NGDAudioProbeInstallIfEnabled(YES); }
         dispatch_async(dispatch_get_main_queue(), ^{ NGStart(); });

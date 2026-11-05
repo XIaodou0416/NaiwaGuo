@@ -1,6 +1,6 @@
 # 功能界面截图
 
-顶部使用宿主红果原图标，功能入口按类别配色。以下均为 0.0.8 模拟器实际运行界面；底栏背景是合成内容。真机效果等待作者提供，届时单独记录机型与版本。
+顶部使用宿主红果原图标，功能入口按类别配色。以下均为 0.0.9 模拟器实际运行界面；底栏背景是合成内容。真机效果等待作者提供，届时单独记录机型与版本。
 
 | 普通液态 | 清透液态 |
 | --- | --- |
@@ -40,20 +40,12 @@
 
 <img src="previews/dock-legacy.png" width="290" alt="公开 UIKit 磨砂底栏分支" />
 
-## 关注核验与赞助弹窗
+## 新版设置与入口
 
-以下使用模拟账号及宿主接口替身，验证确认、灰显、解锁与弹窗布局，不代表真实账号已通过服务器核验。赞赏码使用插件内原图。
+所有功能直接可用，不依赖红果登录账号或关注状态。以下为模拟宿主界面，赞赏码使用插件内原图。
 
-| 首次关注确认 | 赞助弹窗 |
+| 奶蛙功能列表 | 纯文字设置入口 |
 | --- | --- |
-| <img src="previews/author-follow-prompt007.png" width="290" alt="关注作者确认" /> | <img src="previews/sponsor-prompt007.png" width="290" alt="赞助提示和两个关闭选项" /> |
+| <img src="previews/settings-unrestricted009.png" width="290" alt="奶蛙新版彩色功能图标" /> | <img src="previews/native-entry009.png" width="290" alt="只有奶蛙文字的设置入口" /> |
 
-| 未关注，功能灰显 | 重新核验通过后 |
-| --- | --- |
-| <img src="previews/author-locked-settings007.png" width="290" alt="未关注时禁止操作功能列表" /> | <img src="previews/author-unlocked-settings007.png" width="290" alt="模拟接口确认关注后解锁" /> |
-
-## 作者本人账号
-
-模拟红果当前登录账号为作者 ID 106173406210：直接显示可用功能，无需关注自己。此图验证本地账号分支，不代表用户真机验收。
-
-<img src="previews/author-self-settings008.png" width="290" alt="作者本人账号无需关注自己" />
+<img src="previews/sponsor-prompt009.png" width="290" alt="赞助提示和两个关闭选项" />

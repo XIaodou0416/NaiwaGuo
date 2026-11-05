@@ -115,8 +115,8 @@ root = pathlib.Path('dist/simulator-validation')
 result = json.loads((root / 'result.json').read_text())
 assert all(result['nativeSettings'].values()), result['nativeSettings']
 assert all(result['dock'].values()), result['dock']
-assert all(result['authorSelfAccess008'].values()), result['authorSelfAccess008']
-for feature in ['episodeToolbar', 'dockColors', 'statusBarRouting', 'morePanelGlass', 'dramaTitle', 'shareIconReuse', 'thumbnailRepaint', 'dockAspectAndPreview', 'openingAnimation', 'settings001', 'corners002', 'shareRepaint002', 'typography002', 'search002', 'typography003', 'corners003', 'iconStates003', 'dock003', 'dockSurface006', 'dockAvatarAndInk006', 'legacyDock006', 'danmaku007', 'authorAccess007', 'sponsorPrompt007', 'dockColors005', 'dockActions005', 'fullscreenTransitions005', 'speedGlass005', 'dockHaptics005', 'fullscreenPlayback', 'collection075', 'review075', 'underlay075', 'settings075', 'backdrop075']:
+assert all(result['settings009'].values()), result['settings009']
+for feature in ['episodeToolbar', 'dockColors', 'statusBarRouting', 'morePanelGlass', 'dramaTitle', 'shareIconReuse', 'thumbnailRepaint', 'dockAspectAndPreview', 'openingAnimation', 'settings001', 'corners002', 'shareRepaint002', 'typography002', 'search002', 'typography003', 'corners003', 'iconStates003', 'dock003', 'dockSurface006', 'dockAvatarAndInk006', 'legacyDock006', 'danmaku007', 'sponsorPrompt007', 'dockColors005', 'dockActions005', 'fullscreenTransitions005', 'speedGlass005', 'dockHaptics005', 'fullscreenPlayback', 'collection075', 'review075', 'underlay075', 'settings075', 'backdrop075']:
     assert all(result[feature].values()), result[feature]
 assert all(result['playbackPresets'].values()), result['playbackPresets']
 assert all(result['commentGlass'].values()), result['commentGlass']
@@ -160,7 +160,7 @@ with zipfile.ZipFile(root / 'NaiwaGuo-capture-test.zip') as archive:
     width, height = struct.unpack('>II', png[16:24])
     assert width > 300 and height > 600
     report = json.loads(archive.read('NaiwaGuo-diagnostics.json'))
-    assert report['plugin'] == 'NaiwaGuo'
+    assert report['plugin'] == '奶蛙'
     assert report['viewsCount'] > 5
     assert isinstance(report['hitTests'], list)
 print(json.dumps({'status': 'passed', 'checks': result, 'png': f'{width}x{height}'}, ensure_ascii=False, indent=2))
