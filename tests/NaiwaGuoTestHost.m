@@ -900,6 +900,7 @@ static NSDictionary *NGTestPlaybackHeaderGlass(void) {
 #include "NGDebug003Tests.inc"
 #include "NGRegression005Tests.inc"
 #include "NGContinuation005Tests.inc"
+#include "NGRegression006Tests.inc"
 
 static void NGWriteTestResult(NSDictionary *result) {
     NSString *documents = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
@@ -928,7 +929,7 @@ static void NGWriteTestResult(NSDictionary *result) {
     [self.window makeKeyAndVisible];
 
     NSArray *arguments = NSProcessInfo.processInfo.arguments;
-    if ([arguments containsObject:@"--panel-motion005"]) { NGRunPanelMotion005(self.window); return; }
+    NGDockForceLegacyTest=[arguments containsObject:@"--legacy-dock006"];
     if ([arguments containsObject:@"--fresh-defaults005"] || [arguments containsObject:@"--retained-defaults005"]) {
         NGStart();
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW,1.1*NSEC_PER_SEC),dispatch_get_main_queue(),^{ NGRunDefaults005(self.window,[arguments containsObject:@"--retained-defaults005"]); });
@@ -954,6 +955,7 @@ static void NGWriteTestResult(NSDictionary *result) {
         SSTabBarController *host=[SSTabBarController new]; self.window.rootViewController=host; self.window.overrideUserInterfaceStyle=[arguments containsObject:@"--dark"] ? UIUserInterfaceStyleDark : UIUserInterfaceStyleLight; [host loadViewIfNeeded];
         SSVideoSeriesFeedViewController *feed=[SSVideoSeriesFeedViewController new]; NSMutableArray *pages=[host.viewControllers mutableCopy]; pages[0]=feed; host.viewControllers=pages;
         if ([arguments containsObject:@"--account-avatar"]) {
+            double avatarSize=[arguments containsObject:@"--avatar-scale-60"] ? 60 : ([arguments containsObject:@"--avatar-scale-100"] ? 100 : 90); [d setDouble:avatarSize forKey:NGPreferenceDockHeight]; [d setDouble:avatarSize forKey:NGPreferenceDockSearchSize];
             SSVideoSeriesFeedSideBarUserInfoCell *account=[SSVideoSeriesFeedSideBarUserInfoCell new]; account.avatarView=[SSAvatarView new]; account.avatarView.avatarView=[SSBaseReaderImageView new]; [account.contentView addSubview:account.avatarView]; [account.avatarView addSubview:account.avatarView.avatarView]; [feed.view addSubview:account];
             account.avatarView.avatarView.image=[[[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(80,80)] imageWithActions:^(UIGraphicsImageRendererContext *ctx){ [UIColor.systemOrangeColor setFill]; UIRectFill(CGRectMake(0,0,80,80)); [@"N" drawAtPoint:CGPointMake(20,12) withAttributes:@{NSFontAttributeName:[UIFont boldSystemFontOfSize:48],NSForegroundColorAttributeName:UIColor.whiteColor}]; }]; [account updateUserInfo];
         }
@@ -961,9 +963,10 @@ static void NGWriteTestResult(NSDictionary *result) {
         for (NSUInteger i=0;i<18;i++) { UILabel *label=[[UILabel alloc] initWithFrame:CGRectMake(20,40+i*47,350,35)]; label.text=[NSString stringWithFormat:@"短剧内容 %02lu    NaiwaGuo",(unsigned long)i]; label.font=[UIFont systemFontOfSize:20 weight:UIFontWeightMedium]; label.textColor=UIColor.whiteColor; [feed.view addSubview:label]; }
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW,0.4*NSEC_PER_SEC),dispatch_get_main_queue(),^{ CGFloat h=49+self.window.safeAreaInsets.bottom; host.customBar.frame=CGRectMake(0,self.window.bounds.size.height-h,self.window.bounds.size.width,h); NGRefreshDock(host); });
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW,0.8*NSEC_PER_SEC),dispatch_get_main_queue(),^{ NGSystemDock *dock=objc_getAssociatedObject(host,&NGDockAssociation); [dock layoutGlass]; if (collapse) [dock setCollapsed:YES]; });
-        __block BOOL collapsedOK=YES;
+        __block BOOL collapsedOK=YES; __block CGFloat collapsedAvatarWidth=0;
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW,1.6*NSEC_PER_SEC),dispatch_get_main_queue(),^{
-            NGSystemDock *dock=objc_getAssociatedObject(host,&NGDockAssociation); collapsedOK=!collapse || (dock.collapsed && !dock.collapsePlatter.hidden && dock.searchKey.alpha<0.01 && fabs(dock.viewControllers[dock.selectedIndex].tabBarItem.image.size.width-(NGDockAvatarEnabled() && collapse==3 ? 38 : 26))<0.01);
+            NGSystemDock *dock=objc_getAssociatedObject(host,&NGDockAssociation); collapsedOK=!collapse || (dock.collapsed && !dock.collapsePlatter.hidden && dock.searchKey.alpha<0.01 && fabs(dock.viewControllers[dock.selectedIndex].tabBarItem.image.size.width-(NGDockAvatarEnabled() && collapse==3 ? dock.metrics.height-14 : 26))<0.01);
+            if ([arguments containsObject:@"--account-avatar"]) collapsedAvatarWidth=NGColorBounds006(NGSnapshot005(dock.collapsePlatter),UIColor.systemOrangeColor).size.width*NGDockSize(NGPreferenceDockHeight);
             NGSmokeImage(self.window,@"dock-native-003.png");
             if (collapse) [dock setCollapsed:NO];
             if ([arguments containsObject:@"--search-native"]) { host.selectedIndex=3; [dock searchTapped]; }
@@ -973,8 +976,10 @@ static void NGWriteTestResult(NSDictionary *result) {
             BOOL clear=[d boolForKey:NGPreferenceDockClear]; BOOL material=clear ? objc_getAssociatedObject(dock.platter,&NGDockAppliedGlassKey)!=nil : objc_getAssociatedObject(dock.platter,&NGDockAppliedGlassKey)==nil;
             BOOL search=![arguments containsObject:@"--search-native"] || (feed.searchInvocations==1 && host.selectedIndex==0);
             BOOL expanded=!dock.collapsed && !dock.platter.hidden && dock.searchKey.alpha>0.99;
+            CGFloat expandedAvatarWidth=[arguments containsObject:@"--account-avatar"] ? NGColorBounds006(NGSnapshot005(dock.searchKey),UIColor.systemOrangeColor).size.width : 0;
+            BOOL avatarEqual=![arguments containsObject:@"--account-avatar"] || (collapsedAvatarWidth>0 && fabs(collapsedAvatarWidth-expandedAvatarWidth)<1.2);
             NGSmokeImage(self.window,@"dock-expanded-003.png");
-            NGSmokeWrite(@"dock-native-003.json",@{@"passed":@(collapsedOK && expanded && material && search),@"clear":@(clear),@"collapseSide":@(collapse),@"collapsedNativePlateVisible":@(collapsedOK),@"expandedNativePlateVisible":@(expanded),@"nativeMaterialApplied":@(material),@"nativeSearchDispatchedOnce":@(search),@"capsule":NSStringFromCGRect(capsule),@"searchCircle":NSStringFromCGRect(dock.searchKey.frame),@"collapsedFrame":NSStringFromCGRect(dock.collapseFrame)});
+            NGSmokeWrite(@"dock-native-003.json",@{@"passed":@(collapsedOK && expanded && material && search && avatarEqual),@"avatarEqualVisibleSize":@(avatarEqual),@"expandedAvatarWidth":@(expandedAvatarWidth),@"collapsedAvatarWidth":@(collapsedAvatarWidth),@"clear":@(clear),@"collapseSide":@(collapse),@"collapsedNativePlateVisible":@(collapsedOK),@"expandedNativePlateVisible":@(expanded),@"nativeMaterialApplied":@(material),@"nativeSearchDispatchedOnce":@(search),@"capsule":NSStringFromCGRect(capsule),@"searchCircle":NSStringFromCGRect(dock.searchKey.frame),@"collapsedFrame":NSStringFromCGRect(dock.collapseFrame)});
         }); return;
     }
     if ([arguments containsObject:@"--preview-search"]) {
@@ -1208,6 +1213,9 @@ static void NGWriteTestResult(NSDictionary *result) {
             @"dockActions005": NGTestDockActions005(),
             @"fullscreenTransitions005": NGTestFullscreenTransitions005(),
             @"speedGlass005": NGTestSpeedGlass005(),
+            @"dockSurface006": NGTestDockSurface006(),
+            @"dockAvatarAndInk006": NGTestDockAvatarAndInk006(),
+            @"legacyDock006": NGTestLegacyDock006(),
             @"dockHaptics005": NGTestDockHaptics005(),
             @"episodeToolbar": NGTestEpisodeToolbar(),
             @"dockColors": NGTestDockColors(),

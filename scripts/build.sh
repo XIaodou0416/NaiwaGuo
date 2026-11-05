@@ -18,6 +18,7 @@ xcrun --sdk iphoneos clang \
   -Wextra \
   -Wno-unused-parameter \
   -Werror=implicit-function-declaration \
+  -Werror=unguarded-availability -Werror=unguarded-availability-new \
   -dynamiclib \
   src/NaiwaGuo.m \
   "${NG_DEBUG_OBJECTS[@]}" \

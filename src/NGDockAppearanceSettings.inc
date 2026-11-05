@@ -7,7 +7,7 @@
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section { return @[@"底栏",@"液态材质",@"自动收缩",@"底栏内容",@"尺寸",@"独立按钮功能",@"按钮图案",@""][section]; }
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
     if (section==0) return @"按键触动反馈默认关闭，开启后点击底栏和独立按钮时轻震。";
-    if (section==1) return @"普通为系统磨砂，清透保留更多背景细节；两块玻璃同步，跟随系统浅深色。";
+    if (section==1) return NGDockNativeLiquidAvailable() ? @"普通为系统磨砂，清透保留更多背景细节；两块玻璃同步，跟随系统浅深色。" : @"当前系统使用兼容磨砂底栏，图标、颜色、头像、尺寸与独立按钮功能可用。原生液态及自动收缩需要 iOS 26 及以上。";
     if (section==2) return @"上滑收为当前页圆钮，可选左侧、右侧或居中；下滑或点击圆钮展开。收缩后独立按钮隐藏，空余位置可点击。仅 iPhone / iOS 26 及以上。";
     if (section==4) return @"100% 为默认比例。胶囊高度等比缩放、长度独立调节、独立圆钮单独缩放；底边位置保持。";
     if (section==6) return @"红果头像用于独立按钮及居中收缩圆钮。首次未显示时，打开一次红果侧栏同步；未获取到时显示默认头像。";
@@ -18,11 +18,11 @@
     UITableViewCell *cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil]; NSUserDefaults *d=NSUserDefaults.standardUserDefaults;
     if (path.section==0) {
         BOOL haptic=path.row==1; NSString *key=haptic ? NGPreferenceDockHaptics : NGPreferenceDock;
-        cell.textLabel.text=haptic ? @"按键触动反馈" : @"悬浮液态底栏";
+        cell.textLabel.text=haptic ? @"按键触动反馈" : (NGDockNativeLiquidAvailable() ? @"悬浮液态底栏" : @"悬浮磨砂底栏");
         UISwitch *toggle=[UISwitch new]; toggle.on=[d boolForKey:key]; toggle.accessibilityIdentifier=key;
         [toggle addTarget:self action:haptic ? @selector(hapticsChanged:) : @selector(enabledChanged:) forControlEvents:UIControlEventValueChanged]; cell.accessoryView=toggle;
     }
-    else if (path.section==1) { cell.textLabel.text=@[@"普通液态",@"清透液态"][path.row]; cell.accessoryType=path.row==[d boolForKey:NGPreferenceDockClear] ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone; }
+    else if (path.section==1) { cell.textLabel.text=(NGDockNativeLiquidAvailable() ? @[@"普通液态",@"清透液态"] : @[@"普通磨砂",@"轻薄磨砂"])[path.row]; cell.accessoryType=path.row==[d boolForKey:NGPreferenceDockClear] ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone; }
     else if (path.section==2) { cell.textLabel.text=@[@"关闭",@"收缩到左侧",@"收缩到右侧",@"收缩到中间"][path.row]; cell.accessoryType=path.row==NGDockCollapseSide() ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone; }
     else if (path.section==3) { cell.textLabel.text=@[@"文字",@"仅图标",@"图标与文字"][path.row]; cell.accessoryType=path.row==NGDockContentMode() ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone; }
     else if (path.section==4) {
@@ -34,6 +34,7 @@
     } else if (path.section==5) { cell.textLabel.text=NGDockActionTitles()[path.row]; cell.accessoryType=[NGDockActions()[path.row] isEqual:NGDockAction()] ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone; }
     else if (path.section==6) { cell.textLabel.text=@[@"功能图标",@"红果头像"][path.row]; cell.accessoryType=(path.row==1)==NGDockAvatarEnabled() ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone; }
     else cell.textLabel.text=@"恢复底栏默认外观";
+    if (path.section==2 && !NGDockNativeLiquidAvailable() && path.row>0) { cell.textLabel.enabled=NO; cell.detailTextLabel.text=@"需要 iOS 26 及以上"; cell.selectionStyle=UITableViewCellSelectionStyleNone; }
     return cell;
 }
 - (void)refreshDockPreview { NGUpdateDock(); [self.preview refreshIcons]; [self.preview layoutGlass]; }
@@ -46,7 +47,7 @@
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)path {
     [tableView deselectRowAtIndexPath:path animated:YES]; NSUserDefaults *d=NSUserDefaults.standardUserDefaults;
     if (path.section==1) [d setBool:path.row==1 forKey:NGPreferenceDockClear];
-    else if (path.section==2) [d setInteger:path.row forKey:NGPreferenceDockCollapse];
+    else if (path.section==2) { if (!NGDockNativeLiquidAvailable()) return; [d setInteger:path.row forKey:NGPreferenceDockCollapse]; }
     else if (path.section==3) [d setInteger:path.row forKey:NGPreferenceDockContent];
     else if (path.section==5) [d setObject:NGDockActions()[path.row] forKey:NGPreferenceDockAction];
     else if (path.section==6) [d setBool:path.row==1 forKey:NGPreferenceDockAvatar];

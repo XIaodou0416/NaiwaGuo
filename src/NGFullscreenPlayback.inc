@@ -83,7 +83,7 @@ static void NGFullscreenRestore(UIView *view) {
         }
     }
     BOOL wasApplying = NGFullscreenApplying; NGFullscreenApplying = YES;
-    if (CGAffineTransformEqualToTransform(view.transform, state.applied)) [UIView performWithoutAnimation:^{ view.transform = state.source; }];
+    if (CGAffineTransformEqualToTransform(view.transform, state.applied)) view.transform = state.source;
     objc_setAssociatedObject(view, &NGFullscreenStateKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     [NGFullscreenManaged removeObject:view];
     NGFullscreenApplying = wasApplying;
@@ -94,7 +94,7 @@ static void NGFullscreenApplyView(UIView *view) {
     UICollectionView *feed = state.collection;
     if (!NGFullscreenEnabled() || !feed || !view.window || view.window != feed.window ||
         (view != feed && ![view isDescendantOfView:feed]) ||
-        (state.role != NGFullscreenRender && !CGAffineTransformIsIdentity(state.source))) { NGFullscreenRestore(view); return; }
+        !CGAffineTransformIsIdentity(state.source)) { NGFullscreenRestore(view); return; }
     CGFloat scale = NGFullscreenFeedScale(feed);
     if (scale < 1) { NGFullscreenRestore(view); return; }
     CGRect original = NGFullscreenNativeFrame(view);
@@ -115,11 +115,10 @@ static void NGFullscreenApplyView(UIView *view) {
         CGRect target = [player convertRect:player.bounds toView:view.superview];
         // A wide/square clip keeps its native size and placement. Only the
         // reserved bottom background grows; never enlarge the small video.
-        // Native sheets shrink/reposition the portrait canvas. Respect that
-        // inset layout instead of zooming it back to the full player bounds.
-        BOOL inset = original.size.width < target.size.width * 0.90 && original.size.height < target.size.height * 0.90;
-        if (original.size.width >= original.size.height || inset || !CGAffineTransformIsIdentity(state.source)) {
-            transform = state.source; transform.b /= scale; transform.d /= scale;
+        // Keep wide videos native-sized. The 0.0.5 sheet-specific transform
+        // interception and inset exception were reverted at the user's request.
+        if (original.size.width >= original.size.height) {
+            transform.d = 1 / scale;
             CGFloat nativeCenter = view.center.y - target.origin.y;
             transform.ty = (nativeCenter + state.source.ty) / scale - nativeCenter;
         } else {
@@ -137,7 +136,7 @@ static void NGFullscreenApplyView(UIView *view) {
 static void NGFullscreenManage(UIView *view, UICollectionView *feed, UIView *player, NGFullscreenRole role) {
     NGFullscreenState *state = objc_getAssociatedObject(view, &NGFullscreenStateKey);
     if (!state) {
-        if (role != NGFullscreenRender && !CGAffineTransformIsIdentity(view.transform)) return;
+        if (!CGAffineTransformIsIdentity(view.transform)) return;
         state = [NGFullscreenState new]; state.source = view.transform; state.applied = view.transform;
         objc_setAssociatedObject(view, &NGFullscreenStateKey, state, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         if (!NGFullscreenManaged) NGFullscreenManaged = [NSHashTable weakObjectsHashTable];
@@ -221,7 +220,7 @@ static NGFullscreenState *NGFullscreenBeginHostWrite(UIView *view) {
     if (NGFullscreenApplying || !NSThread.isMainThread) return nil;
     NGFullscreenState *state = objc_getAssociatedObject(view, &NGFullscreenStateKey);
     if (!state) return nil;
-    NGFullscreenApplying = YES; [UIView performWithoutAnimation:^{ view.transform = state.source; }]; return state;
+    NGFullscreenApplying = YES; view.transform = state.source; return state;
 }
 static void NGFullscreenEndHostWrite(UIView *view, NGFullscreenState *state) {
     if (!state) return;
@@ -252,13 +251,6 @@ static void NGInstallPlaybackFullscreenHooks(void) {
         }));
         SEL transform = @selector(setTransform:); Method tm = class_getInstanceMethod(UIView.class, transform); IMP to = method_getImplementation(tm);
         method_setImplementation(tm, imp_implementationWithBlock(^(UIView *view, CGAffineTransform value) {
-            NGFullscreenState *managed = objc_getAssociatedObject(view, &NGFullscreenStateKey);
-            if (!NGFullscreenApplying && NSThread.isMainThread && managed && managed.role == NGFullscreenRender) {
-                // Transform writes do not need a temporary identity projection.
-                // Compose directly so a native sheet animation starts from the
-                // visible video transform, without a one-frame zoom/reset.
-                managed.source = value; NGFullscreenApplyView(view); return;
-            }
             NGFullscreenState *state = NGFullscreenBeginHostWrite(view);
             ((void (*)(id, SEL, CGAffineTransform))to)(view, transform, value); NGFullscreenEndHostWrite(view, state);
         }));

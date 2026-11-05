@@ -8,7 +8,7 @@ ng_build_debug_objects() {
   mkdir -p "build/debug-$variant"
   for file in src/Debug/*.m src/Debug/*.mm src/Debug/*.c; do
     object="build/debug-$variant/$(basename "$file").o"
-    local flags=(-arch "$arch" -isysroot "$sdk_path" "$deployment" -fvisibility=hidden -Os -Wall -Wextra -Wno-unused-parameter -Isrc/Debug)
+    local flags=(-arch "$arch" -isysroot "$sdk_path" "$deployment" -fvisibility=hidden -Os -Wall -Wextra -Wno-unused-parameter -Werror=unguarded-availability -Werror=unguarded-availability-new -Isrc/Debug)
     case "$file" in
       *.m) flags+=(-fobjc-arc -fmodules);;
       *.mm) flags+=(-fobjc-arc -fmodules -std=c++17);;

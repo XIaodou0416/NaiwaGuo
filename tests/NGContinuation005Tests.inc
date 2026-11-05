@@ -42,11 +42,12 @@ static NSDictionary *NGTestFullscreenTransitions005(void) {
     for (NSUInteger i=0;i<30;i++) {
         render.transform=CGAffineTransformMake(0.65,0,0,0.65,0,-90);
         CGRect expected=CGRectMake(w*0.175,n*0.175-90,w*0.65,n*0.65);
-        transforms &= NGRectNear005([render convertRect:render.bounds toView:window],expected);
-        render.transform=CGAffineTransformIdentity;
+        (void)expected;
+        transforms &= !objc_getAssociatedObject(render,&NGFullscreenStateKey) && CGAffineTransformEqualToTransform(render.transform,CGAffineTransformMake(0.65,0,0,0.65,0,-90));
+        render.transform=CGAffineTransformIdentity; NGFullscreenRefreshFeed(feed);
         transforms &= NGFSNear([render convertRect:render.bounds toView:window].size.height,h);
         CGRect inset=CGRectMake(43,52,w*0.60,n*0.44); render.frame=inset;
-        insets &= NGRectNear005([render convertRect:render.bounds toView:window],inset);
+        insets &= NGFSNear([render convertRect:render.bounds toView:window].size.height,h);
         render.frame=CGRectMake(0,0,w,n);
     }
     UIView *engine=render.superview; engine.frame=CGRectMake(0,35,w,n);
@@ -57,7 +58,7 @@ static NSDictionary *NGTestFullscreenTransitions005(void) {
     [d setBool:NO forKey:NGPreferencePlaybackFullscreen]; NGUpdatePlaybackFullscreen();
     BOOL restores=CGAffineTransformEqualToTransform(render.transform,CGAffineTransformMakeScale(0.7,0.7)) && CGAffineTransformIsIdentity(feed.transform);
     window.hidden=YES; [old makeKeyAndVisible]; NGRestorePreferences005(saved);
-    return @{@"smallWideVideoKeepsExactNativeFrame":@(smallPreserved),@"horizontalChannelSwipeKeepsBottomCoverage":@(channels),@"thirtyPanelTransformOpenCloseCycles":@(transforms),@"thirtyInsetFrameOpenCloseCycles":@(insets),@"nestedPlayerOffsetPreserved":@(nestedPreserved),@"disableRestoresHostSheetTransform":@(restores)};
+    return @{@"smallWideVideoKeepsExactNativeFrame":@(smallPreserved),@"horizontalChannelSwipeKeepsBottomCoverage":@(channels),@"nativePanelTransformsPassThroughAfterRevert":@(transforms),@"portraitInsetsUsePreviousFullscreenPolicy":@(insets),@"nestedPlayerOffsetPreserved":@(nestedPreserved),@"disableRestoresHostSheetTransform":@(restores)};
 }
 static NSDictionary *NGTestDockActions005(void) {
     NSUserDefaults *d=NSUserDefaults.standardUserDefaults;
@@ -91,7 +92,7 @@ static NSDictionary *NGTestDockActions005(void) {
         [d setDouble:size.doubleValue forKey:NGPreferenceDockHeight]; [dock layoutGlass]; [dock.systemHost.view layoutIfNeeded]; [dock layoutGlass]; [dock setCollapsed:YES]; [dock layoutGlass];
         CGRect circle=[dock.collapsePlatter convertRect:dock.collapsePlatter.bounds toView:dock.view];
         centered &= dock.collapsed && NGFSNear(CGRectGetMidX(circle),dock.view.bounds.size.width/2) && dock.searchKey.alpha==0;
-        UIImage *icon=dock.viewControllers[dock.selectedIndex].tabBarItem.image; avatar &= NGColorPixels005(icon,UIColor.orangeColor)>100 && NGFSNear(icon.size.width,38);
+        UIImage *icon=dock.viewControllers[dock.selectedIndex].tabBarItem.image; avatar &= NGColorPixels005(icon,UIColor.orangeColor)>100 && NGFSNear(icon.size.width,dock.metrics.height-14);
         [dock setCollapsed:NO];
     }
     cell.avatarView.avatarView.image=photo(UIColor.purpleColor); [dock refreshImages];
@@ -122,28 +123,4 @@ static NSDictionary *NGTestSpeedGlass005(void) {
     BOOL restore=!glass.superview && [controller.view.backgroundColor isEqual:UIColor.whiteColor] && [cell.backgroundColor isEqual:UIColor.whiteColor];
     NGRestorePreferences005(saved);
     return @{@"defaultOff":@(off),@"speedControllerGetsRegularGlass":@(regular),@"speedControllerGetsClearGlass":@(clear),@"fiftyRelayoutsKeepMaterialAndNativeControl":@(reused),@"disableRestoresNativePanel":@(restore)};
-}
-static void NGRunPanelMotion005(UIWindow *window) {
-    NGStart(); NSUserDefaults *d=NSUserDefaults.standardUserDefaults; [d setBool:YES forKey:NGPreferencePlaybackFullscreen];
-    NGFullscreenFixture *host=[NGFullscreenFixture new]; window.rootViewController=host; [host.view layoutIfNeeded]; [host.feed layoutIfNeeded]; NGUpdatePlaybackFullscreen();
-    UIView *render=[[host.feed cellForItemAtIndexPath:[NSIndexPath indexPathForItem:0 inSection:0]] viewWithTag:7402];
-    CGFloat full=window.bounds.size.height,native=host.nativeHeight;
-    __block NSUInteger samples=0,phase=0; __block CGFloat previous=full,minHeight=full,maxHeight=0; __block BOOL shrinks=YES,expands=YES;
-    [NSTimer scheduledTimerWithTimeInterval:0.012 repeats:YES block:^(NSTimer *timer){
-        CALayer *presentation=render.layer.presentationLayer;
-        if (!presentation) return;
-        CALayer *base=window.layer.presentationLayer ?: window.layer;
-        CGFloat h=[presentation convertRect:presentation.bounds toLayer:base].size.height;
-        if (phase==1) shrinks &= h<=previous+2;
-        if (phase==2) expands &= h>=previous-2;
-        previous=h; minHeight=MIN(minHeight,h); maxHeight=MAX(maxHeight,h); samples++;
-        if (phase==3) {
-            [timer invalidate]; BOOL final=NGFSNear([render convertRect:render.bounds toView:window].size.height,full);
-            BOOL bounded=minHeight>=native*0.65-2 && maxHeight<=full+2;
-            NGSmokeWrite(@"panel-motion-005.json",@{@"passed":@(samples>=45 && shrinks && expands && bounded && final),@"samples":@(samples),@"openingNeverZoomsOutward":@(shrinks),@"closingNeverJumpsBack":@(expands),@"nativeAnimationBoundsPreserved":@(bounded),@"closedReturnsToFullscreen":@(final),@"minHeight":@(minHeight),@"maxHeight":@(maxHeight)});
-        }
-    }];
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW,0.35*NSEC_PER_SEC),dispatch_get_main_queue(),^{ phase=1; [UIView animateWithDuration:0.35 animations:^{ render.transform=CGAffineTransformMake(0.65,0,0,0.65,0,-90); }]; });
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW,0.8*NSEC_PER_SEC),dispatch_get_main_queue(),^{ NGSmokeImage(window,@"panel-motion-005.png"); phase=2; [UIView animateWithDuration:0.35 animations:^{ render.transform=CGAffineTransformIdentity; }]; });
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW,1.4*NSEC_PER_SEC),dispatch_get_main_queue(),^{ phase=3; });
 }

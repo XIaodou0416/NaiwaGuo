@@ -18,7 +18,7 @@ void NGDRegisterFLEXKingProvider(void);
 #import <math.h>
 
 static NSString *const NGPluginName = @"NaiwaGuo";
-static NSString *const NGVersion = @"0.0.5";
+static NSString *const NGVersion = @"0.0.6";
 static NSString *const NGHostBundleIdentifier = @"com.phoenix.video";
 static NSString *const NGHostExecutable = @"Eggplant";
 static NSString *const NGPrefix = @"com.naiwaguo.";

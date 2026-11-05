@@ -1,3 +1,13 @@
+#if NG_TEST
+static BOOL NGDockForceLegacyTest;
+#endif
+static BOOL NGDockNativeLiquidAvailable(void) {
+#if NG_TEST
+    if (NGDockForceLegacyTest) return NO;
+#endif
+    if (@available(iOS 26.0,*)) return YES;
+    return NO;
+}
 static NSString *const NGPreferenceDockAction=@"com.naiwaguo.appearance.dockAction";
 static NSString *const NGPreferenceDockAvatar=@"com.naiwaguo.appearance.dockAvatar";
 static NSString *const NGPreferenceDockHaptics=@"com.naiwaguo.appearance.dockHaptics";
@@ -9,6 +19,7 @@ static NSString *const NGPreferenceDockSearchSize=@"com.naiwaguo.appearance.dock
 static NSString *const NGPreferenceDockContent=@"com.naiwaguo.appearance.dockContent";
 static NSInteger NGDockContentMode(void) { NSInteger n=[NSUserDefaults.standardUserDefaults integerForKey:NGPreferenceDockContent]; return n>=0 && n<=2 ? n : 0; }
 static NSInteger NGDockCollapseSide(void) {
+    if (!NGDockNativeLiquidAvailable()) return 0;
     if (@available(iOS 26.0,*)) { if (UIDevice.currentDevice.userInterfaceIdiom==UIUserInterfaceIdiomPhone) { NSInteger n=[NSUserDefaults.standardUserDefaults integerForKey:NGPreferenceDockCollapse]; return n>=1 && n<=3 ? n : 0; } } return 0;
 }
 static CGFloat NGDockSize(NSString *key) { id n=[NSUserDefaults.standardUserDefaults objectForKey:key]; CGFloat value=n ? [n doubleValue] : 100; return isfinite(value) ? MIN(1,MAX([key isEqualToString:NGPreferenceDockLength]?0.8:0.6,value/100)) : 1; }
@@ -62,7 +73,7 @@ static UIImage *NGDockIcon(NSUInteger index, BOOL selected) {
     NSString *custom = [NSUserDefaults.standardUserDefaults stringForKey:[NSString stringWithFormat:@"com.naiwaguo.appearance.dockIcon.%lu", (unsigned long)index]];
     if (custom.length) symbol = custom;
     UIImageSymbolWeight weight = [style isEqualToString:@"minimal"] ? UIImageSymbolWeightRegular : UIImageSymbolWeightMedium;
-    return [UIImage systemImageNamed:symbol withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:21 weight:weight]] ?: [UIImage systemImageNamed:normal[MIN(index, 3)]];
+    return [UIImage systemImageNamed:symbol withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:21 weight:weight]] ?: [UIImage systemImageNamed:@[@"house",@"play.rectangle",@"cart",@"person"][MIN(index,3)]];
 }
 static char NGDockRenderedItemAssociation;
 @interface NGDockRenderedItemState : NSObject
@@ -256,20 +267,32 @@ static BOOL NGDockHasPlaybackPanel(UITabBarController *host) {
     return NO;
 }
 
+#include "NGDockNativeSurface.inc"
 static void NGDockRestoreNativeContent(NGSystemDock *dock) {
-    for (UIView *view in dock.nativeChildren.keyEnumerator.allObjects) { NSArray *saved=[dock.nativeChildren objectForKey:view]; view.layer.opacity=[saved[0] floatValue]; view.userInteractionEnabled=[saved[1] boolValue]; }
-    [dock.nativeChildren removeAllObjects]; dock.originalBar.backgroundColor=dock.nativeBackground;
+    NGDockNativeSurfaceWriting=YES;
+    for (UIView *view in dock.nativeChildren.keyEnumerator.allObjects) {
+        NGDockNativeSurfaceState *state=objc_getAssociatedObject(view,&NGDockNativeSurfaceKey);
+        NSArray *saved=[dock.nativeChildren objectForKey:view]; view.layer.opacity=state ? state.opacity : [saved[0] floatValue]; view.userInteractionEnabled=state ? state.interaction : [saved[1] boolValue];
+        objc_setAssociatedObject(view,&NGDockNativeSurfaceKey,nil,OBJC_ASSOCIATION_RETAIN_NONATOMIC); objc_setAssociatedObject(view.layer,&NGDockNativeSurfaceKey,nil,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    [dock.nativeChildren removeAllObjects]; dock.originalBar.backgroundColor=dock.nativeBackground; dock.originalBar.layer.backgroundColor=dock.nativeLayerBackground.CGColor;
+    objc_setAssociatedObject(dock.originalBar,&NGDockNativeSurfaceKey,nil,OBJC_ASSOCIATION_RETAIN_NONATOMIC); objc_setAssociatedObject(dock.originalBar.layer,&NGDockNativeSurfaceKey,nil,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    NGDockNativeSurfaceWriting=NO;
     objc_setAssociatedObject(dock.originalBar,&NGDockNativeOwnerKey,nil,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     [dock.collapsePan.view removeGestureRecognizer:dock.collapsePan];
 }
 static void NGDockHideNativeContent(NGSystemDock *dock) {
     UIView *bar=dock.originalBar; if (!bar) return;
+    NGDockNativeSurfaceWriting=YES;
     for (UIView *child in bar.subviews) {
         if (child==dock.view) continue;
         if (![dock.nativeChildren objectForKey:child]) [dock.nativeChildren setObject:@[@(child.layer.opacity),@(child.userInteractionEnabled)] forKey:child];
+        NGDockRegisterNativeSurface(child,dock,NO);
         if (child.layer.opacity!=0) child.layer.opacity=0; if (child.userInteractionEnabled) child.userInteractionEnabled=NO;
     }
     if (bar.backgroundColor && CGColorGetAlpha(bar.backgroundColor.CGColor)>0) bar.backgroundColor=UIColor.clearColor;
+    if (bar.layer.backgroundColor && CGColorGetAlpha(bar.layer.backgroundColor)>0) bar.layer.backgroundColor=UIColor.clearColor.CGColor;
+    NGDockNativeSurfaceWriting=NO;
 }
 static void NGApplyDockItems(UITabBarController *host) {
     NGSystemDock *dock = objc_getAssociatedObject(host, &NGDockAssociation);
@@ -304,7 +327,6 @@ static void NGApplyDockItems(UITabBarController *host) {
     }
 
     BOOL enabled = [NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceDock];
-    if (@available(iOS 26.0, *)) {} else { enabled = NO; }
     if (!enabled && dock) {
         NGDockRestoreNativeContent(dock);
         host.tabBar.hidden = dock.systemBarHidden;
@@ -350,7 +372,8 @@ static void NGApplyDockItems(UITabBarController *host) {
         dock.systemBarHidden = host.tabBar.hidden;
         [host addChildViewController:dock];
         [original addSubview:dock.view];
-        dock.nativeBackground=original.backgroundColor;
+        dock.nativeBackground=original.backgroundColor; dock.nativeLayerBackground=original.layer.backgroundColor ? [UIColor colorWithCGColor:original.layer.backgroundColor] : nil;
+        NGDockRegisterNativeSurface(original,dock,YES);
         objc_setAssociatedObject(original,&NGDockNativeOwnerKey,dock,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         [dock didMoveToParentViewController:host];
         objc_setAssociatedObject(host, &NGDockAssociation, dock, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
@@ -556,6 +579,7 @@ static void NGUpdateDock(void) {
 
 static void NGInstallDockHooks(void) {
     NGInstallDockAvatarHooks();
+    NGInstallDockNativeSurfaceHooks();
     NGDockInstallPlatterHooks();
     static BOOL hitInstalled; Class barClass=NSClassFromString(@"SSTabBar");
     if (barClass && !hitInstalled) {
@@ -563,6 +587,13 @@ static void NGInstallDockHooks(void) {
         class_replaceMethod(barClass,selector,imp_implementationWithBlock(^UIView *(UIView *bar,CGPoint point,UIEvent *event){ NGSystemDock *dock=objc_getAssociatedObject(bar,&NGDockNativeOwnerKey); if (dock && !bar.hidden && bar.alpha>=0.01) return [dock.view hitTest:[bar convertPoint:point toView:dock.view] withEvent:event]; return ((UIView *(*)(id,SEL,CGPoint,id))prior)(bar,selector,point,event); }),method_getTypeEncoding(method));
     }
 
+    static BOOL additionInstalled;
+    if (barClass && !additionInstalled) {
+        additionInstalled=YES; SEL sel=@selector(didAddSubview:); Method method=class_getInstanceMethod(barClass,sel); IMP original=method_getImplementation(method);
+        class_replaceMethod(barClass,sel,imp_implementationWithBlock(^(UIView *bar,UIView *child){
+            ((void(*)(id,SEL,id))original)(bar,sel,child); NGSystemDock *dock=objc_getAssociatedObject(bar,&NGDockNativeOwnerKey); if (dock && child!=dock.view) NGDockHideNativeContent(dock);
+        }),method_getTypeEncoding(method));
+    }
     NGInstallDockUnderlayHooks();
     static NSMutableSet *installed;
     if (!installed) installed = [NSMutableSet set];

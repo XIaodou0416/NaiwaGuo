@@ -58,7 +58,7 @@ static UIImage *NGDockCurrentAvatar(void) {
     if (photo==NGDockAvatarPhoto && NGDockAvatarCircle) return NGDockAvatarCircle;
     NGDockAvatarPhoto=photo;
     if (photo.size.width<1 || photo.size.height<1) return nil;
-    CGFloat side=38,scale=MAX(side/photo.size.width,side/photo.size.height);
+    CGFloat side=64,scale=MAX(side/photo.size.width,side/photo.size.height);
     CGSize size=CGSizeMake(photo.size.width*scale,photo.size.height*scale);
     NGDockAvatarCircle=[[[[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(side,side)] imageWithActions:^(UIGraphicsImageRendererContext *context){
         [[UIBezierPath bezierPathWithOvalInRect:CGRectMake(0,0,side,side)] addClip];

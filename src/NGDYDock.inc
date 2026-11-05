@@ -19,6 +19,9 @@ static void NGDockInstallPlatterHooks(void);
 @property(nonatomic,copy) NSArray<NSNumber *> *sourceIndexes;
 @property(nonatomic,strong) NSMutableDictionary<NSNumber *,UIViewController *> *pages;
 @property(nonatomic,strong) UITabBar *tabBar;
+@property(nonatomic) BOOL legacyMaterial;
+@property(nonatomic,strong) UIVisualEffectView *legacyPlatter;
+@property(nonatomic,strong) NSMutableArray<UIButton *> *legacyButtons;
 @property(nonatomic,strong) UITabBarController *systemHost;
 @property(nonatomic,copy) NSArray<UIViewController *> *viewControllers;
 @property(nonatomic) NSUInteger selectedIndex;
@@ -37,6 +40,8 @@ static void NGDockInstallPlatterHooks(void);
 @property(nonatomic) UIUserInterfaceStyle glassStyle,inkStyle;
 @property(nonatomic) BOOL clearApplied;
 @property(nonatomic,strong) UIColor *nativeBackground;
+@property(nonatomic,strong) UIColor *nativeLayerBackground;
+@property(nonatomic,copy) NSString *inkAppearanceKey;
 @property(nonatomic,strong) NSMapTable<UIView *,NSArray *> *nativeChildren;
 - (void)setViewControllers:(NSArray<UIViewController *> *)pages animated:(BOOL)animated;
 - (void)refreshImages;
@@ -45,6 +50,32 @@ static void NGDockInstallPlatterHooks(void);
 - (void)nativeExpanded;
 - (void)searchTapped;
 @end
+@interface NGSystemDock (Legacy)
+- (void)layoutLegacyDock;
+- (void)refreshLegacyButtons;
+- (void)legacyPageTapped:(UIButton *)sender;
+@end
+static char NGDockInkOwnerKey;
+@interface NGDockInkOwner : NSObject
+@property(nonatomic,weak) NGSystemDock *dock;
+@end
+@implementation NGDockInkOwner @end
+static void NGDockBindInkOwner(UITabBar *bar,NGSystemDock *dock) {
+    NGDockInkOwner *owner=[NGDockInkOwner new]; owner.dock=dock;
+    objc_setAssociatedObject(bar,&NGDockInkOwnerKey,owner,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+static void NGDockInstallInkHooks(void) {
+    static dispatch_once_t once; dispatch_once(&once,^{
+        for (NSString *name in @[@"setTintColor:",@"setUnselectedItemTintColor:"]) {
+            SEL sel=NSSelectorFromString(name); Method method=class_getInstanceMethod(UITabBar.class,sel); IMP original=method_getImplementation(method); BOOL selected=[name isEqual:@"setTintColor:"];
+            class_replaceMethod(UITabBar.class,sel,imp_implementationWithBlock(^(UITabBar *bar,UIColor *value){
+                NGSystemDock *dock=((NGDockInkOwner *)objc_getAssociatedObject(bar,&NGDockInkOwnerKey)).dock;
+                if (dock && [NSUserDefaults.standardUserDefaults arrayForKey:selected ? NGPreferenceDockSelectedColor : NGPreferenceDockNormalColor].count==4) value=NGDockColor(selected,dock.inkStyle);
+                ((void(*)(id,SEL,id))original)(bar,sel,value);
+            }),method_getTypeEncoding(method));
+        }
+    });
+}
 static UIView *NGDockFindPlatter(UIView *root,BOOL square) {
     Class cls=NSClassFromString(@"UIKit._UITabBarPlatterView"); if (!cls) return nil;
     NSMutableArray *nodes=[NSMutableArray arrayWithArray:root.subviews]; UIView *fallback=nil;
@@ -123,10 +154,12 @@ static BOOL NGDockInvokeAction(NGSystemDock *dock);
 - (void)loadView { NGDockSurface *view=[NGDockSurface new]; view.dock=self; view.backgroundColor=UIColor.clearColor; view.opaque=NO; view.clipsToBounds=NO; self.view=view; }
 - (void)viewDidLoad {
     [super viewDidLoad]; self.view.accessibilityIdentifier=@"NaiwaGuo.SystemDock"; self.pages=[NSMutableDictionary dictionary]; self.nativeChildren=[NSMapTable weakToStrongObjectsMapTable]; self.metrics=NGDockFallbackMetrics; self.collapseSide=-1;
+    self.legacyMaterial=!NGDockNativeLiquidAvailable();
     [self rebuildBar]; NGDockInstallPlatterHooks();
-    if (@available(iOS 26.0,*)) {
+    if (!self.legacyMaterial) if (@available(iOS 26.0,*)) {
         self.searchKey=[[UIVisualEffectView alloc] initWithEffect:NGDockGlassEffect(self.traitCollection.userInterfaceStyle,YES)]; self.searchKey.cornerConfiguration=UICornerConfiguration.capsuleConfiguration;
-    } else self.searchKey=[[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemThinMaterial]];
+    }
+    if (!self.searchKey) { self.searchKey=[[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemThinMaterial]]; self.searchKey.clipsToBounds=YES; }
     self.searchKey.accessibilityIdentifier=@"NaiwaGuo.Dock.SearchGlass"; [self.view addSubview:self.searchKey];
     self.searchIcon=[[UIImageView alloc] initWithImage:[UIImage systemImageNamed:@"magnifyingglass" withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:28 weight:UIImageSymbolWeightMedium]]]; self.searchIcon.contentMode=UIViewContentModeScaleAspectFit; [self.searchKey.contentView addSubview:self.searchIcon];
     self.searchHit=[UIButton buttonWithType:UIButtonTypeCustom]; self.searchHit.accessibilityLabel=@"搜索短剧"; self.searchHit.accessibilityIdentifier=@"NaiwaGuo.Dock.Search"; [self.searchHit addTarget:self action:@selector(searchTapped) forControlEvents:UIControlEventTouchUpInside]; [self.searchKey.contentView addSubview:self.searchHit];
@@ -136,11 +169,17 @@ static BOOL NGDockInvokeAction(NGSystemDock *dock);
     NSInteger side=NGDockCollapseSide(); if (self.tabBar && side==self.collapseSide) return;
     for (UIView *old in @[self.platter ?: [UIView new],self.collapsePlatter ?: [UIView new]]) objc_setAssociatedObject(old,&NGDockPlatterOwnerKey,nil,OBJC_ASSOCIATION_ASSIGN);
     [self.collapsePan.view removeGestureRecognizer:self.collapsePan]; [self.systemHost.view removeFromSuperview]; [self.systemHost willMoveToParentViewController:nil]; [self.systemHost removeFromParentViewController]; [self.tabBar removeFromSuperview]; self.systemHost=nil; self.platter=nil; self.collapsePlatter=nil; self.collapseFrame=CGRectZero; self.collapsed=NO; self.collapseSide=side; self.metrics=NGDockFallbackMetrics; self.metricsWidth=0;
-    if (side) {
+    if (self.legacyMaterial) {
+        self.tabBar=[UITabBar new]; self.tabBar.delegate=self;
+        self.legacyPlatter=[[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemThinMaterial]];
+        self.legacyPlatter.accessibilityIdentifier=@"NaiwaGuo.Dock.LegacyBlur"; self.legacyPlatter.clipsToBounds=YES;
+        [self.view addSubview:self.legacyPlatter]; self.platter=self.legacyPlatter; self.legacyButtons=[NSMutableArray array];
+    } else if (side) {
         self.systemHost=[UITabBarController new]; self.systemHost.delegate=self;
         if (@available(iOS 26.0,*)) self.systemHost.tabBarMinimizeBehavior=UITabBarMinimizeBehaviorOnScrollDown;
         [self addChildViewController:self.systemHost]; self.systemHost.view.backgroundColor=UIColor.clearColor; [self.view addSubview:self.systemHost.view]; [self.systemHost didMoveToParentViewController:self]; self.tabBar=self.systemHost.tabBar;
     } else { self.tabBar=[UITabBar new]; self.tabBar.delegate=self; [self.view addSubview:self.tabBar]; }
+    NGDockBindInkOwner(self.tabBar,self);
     if (self.viewControllers) [self setViewControllers:self.viewControllers animated:NO];
     if (self.searchKey) [self.view bringSubviewToFront:self.searchKey];
     if (side && self.host) {
@@ -159,6 +198,7 @@ static BOOL NGDockInvokeAction(NGSystemDock *dock);
     if (index>=self.viewControllers.count) return; _selectedIndex=index;
     if (self.systemHost) { if (self.systemHost.selectedIndex!=index) self.systemHost.selectedIndex=index; }
     else if (self.tabBar.selectedItem!=self.viewControllers[index].tabBarItem) self.tabBar.selectedItem=self.viewControllers[index].tabBarItem;
+    if (self.legacyMaterial) [self refreshLegacyButtons];
 }
 - (void)playTapFeedback {
     if (!self.host || !self.view.window || self.view.hidden || self.view.alpha<0.01 ||
@@ -181,14 +221,26 @@ static BOOL NGDockInvokeAction(NGSystemDock *dock);
 - (BOOL)tabBarController:(UITabBarController *)controller shouldSelectViewController:(UIViewController *)page { NSUInteger index=[self.viewControllers indexOfObject:page]; if (index==NSNotFound) return NO; [self selectPage:index]; return YES; }
 - (void)refreshImages {
     if (self.inkStyle==UIUserInterfaceStyleUnspecified) self.inkStyle=self.traitCollection.userInterfaceStyle;
-    self.tabBar.tintColor = NGDockColor(YES,self.inkStyle);
+    UIColor *selectedInk=NGDockColor(YES,self.inkStyle),*normalInk=NGDockColor(NO,self.inkStyle);
+    NSString *inkKey=[NSString stringWithFormat:@"%@|%@|%p",selectedInk,normalInk,self.tabBar];
+    if (![self.inkAppearanceKey isEqual:inkKey]) {
+        self.inkAppearanceKey=inkKey;
+        UITabBarAppearance *appearance=[self.tabBar.standardAppearance copy];
+        for (UITabBarItemAppearance *items in @[appearance.stackedLayoutAppearance,appearance.inlineLayoutAppearance,appearance.compactInlineLayoutAppearance]) {
+            items.normal.iconColor=normalInk; items.selected.iconColor=selectedInk;
+            NSMutableDictionary *normal=[items.normal.titleTextAttributes mutableCopy] ?: [NSMutableDictionary dictionary]; normal[NSForegroundColorAttributeName]=normalInk; items.normal.titleTextAttributes=normal;
+            NSMutableDictionary *selected=[items.selected.titleTextAttributes mutableCopy] ?: [NSMutableDictionary dictionary]; selected[NSForegroundColorAttributeName]=selectedInk; items.selected.titleTextAttributes=selected;
+        }
+        self.tabBar.standardAppearance=appearance; self.tabBar.scrollEdgeAppearance=appearance;
+    }
+    self.tabBar.tintColor = selectedInk;
     self.tabBar.unselectedItemTintColor = NGDockColor(NO,self.inkStyle);
     self.searchIcon.tintColor = NGDockColor(YES,self.inkStyle);
     NSUInteger actionIndex=[NGDockActions() indexOfObject:NGDockAction()]; UIImage *avatar=NGDockCurrentAvatar();
     NSString *appearance=[NSString stringWithFormat:@"%@|%d|%p",NGDockAction(),NGDockAvatarEnabled(),avatar];
     if (![self.actionAppearanceKey isEqual:appearance]) {
         self.actionAppearanceKey=appearance;
-        self.searchIcon.image=avatar ?: [UIImage systemImageNamed:NGDockAvatarEnabled() ? @"person.crop.circle" : NGDockActionSymbols()[actionIndex] withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:28 weight:UIImageSymbolWeightMedium]];
+        self.searchIcon.image=avatar ?: ([UIImage systemImageNamed:NGDockAvatarEnabled() ? @"person.crop.circle" : NGDockActionSymbols()[actionIndex] withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:28 weight:UIImageSymbolWeightMedium]] ?: [UIImage systemImageNamed:@"cart"]);
         self.searchHit.accessibilityLabel=NGDockActionTitles()[actionIndex];
     }
     for (NSUInteger index=0;index<self.viewControllers.count;index++) {
@@ -196,7 +248,7 @@ static BOOL NGDockInvokeAction(NGSystemDock *dock);
         if (self.collapsed && index==self.selectedIndex) {
             BOOL accountAvatar=self.collapseSide==3 && NGDockAvatarEnabled();
             UIImage *icon=accountAvatar ? (NGDockCurrentAvatar() ?: [UIImage systemImageNamed:@"person.crop.circle"]) : NGDockIcon(source,YES);
-            CGFloat side=accountAvatar ? 38 : (NGDockContentMode()==2 ? 24 : 26);
+            CGFloat side=accountAvatar ? MAX(1,self.metrics.height-14) : (NGDockContentMode()==2 ? 24 : 26);
             // Apply symbol ink before rasterizing; uploaded photos retain their colors.
             if (icon.renderingMode!=UIImageRenderingModeAlwaysOriginal) icon=[icon imageWithTintColor:NGDockColor(YES,self.inkStyle) renderingMode:UIImageRenderingModeAlwaysOriginal];
             UIImage *image=[NGIconImageOnCanvas(icon,side,side) imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
@@ -204,12 +256,15 @@ static BOOL NGDockInvokeAction(NGSystemDock *dock);
         }
         else NGDockApplyRenderedImages(item,source,self.inkStyle);
     }
+    if (self.legacyMaterial) [self refreshLegacyButtons];
 }
 - (void)viewDidLayoutSubviews { [super viewDidLayoutSubviews]; [self layoutGlass]; }
 - (void)layoutGlass {
     if (self.layingOut || self.view.bounds.size.width<1) return; self.layingOut=YES;
     @try {
-        [self rebuildBar]; CGSize size=self.view.bounds.size;
+        [self rebuildBar];
+        if (self.legacyMaterial) { [self layoutLegacyDock]; return; }
+        CGSize size=self.view.bounds.size;
         UIUserInterfaceStyle style=self.view.window.windowScene.traitCollection.userInterfaceStyle; if (style==UIUserInterfaceStyleUnspecified) style=self.traitCollection.userInterfaceStyle;
         BOOL clear=[NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceDockClear];
         if (self.glassStyle!=style || self.clearApplied!=clear) { self.glassStyle=style; self.clearApplied=clear; self.tabBar.overrideUserInterfaceStyle=style; self.searchKey.overrideUserInterfaceStyle=style; if (@available(iOS 26.0,*)) self.searchKey.effect=NGDockGlassEffect(style,YES); }
@@ -269,6 +324,7 @@ static BOOL NGDockInvokeAction(NGSystemDock *dock);
 - (void)dealloc { [self.collapsePan.view removeGestureRecognizer:self.collapsePan]; for (UIView *p in @[self.platter ?: [UIView new],self.collapsePlatter ?: [UIView new]]) objc_setAssociatedObject(p,&NGDockPlatterOwnerKey,nil,OBJC_ASSOCIATION_ASSIGN); }
 @end
 static void NGDockInstallPlatterHooks(void) {
+    NGDockInstallInkHooks();
     static BOOL installed; if (installed) return; Class cls=NSClassFromString(@"UIKit._UITabBarPlatterView"); if (!cls) return; installed=YES;
     for (NSString *name in @[@"setFrame:",@"setBounds:"]) {
         SEL sel=NSSelectorFromString(name); Method method=class_getInstanceMethod(cls,sel); IMP original=method_getImplementation(method);
@@ -279,3 +335,5 @@ static void NGDockInstallPlatterHooks(void) {
     SEL hidden=@selector(setHidden:); m=class_getInstanceMethod(cls,hidden); IMP hiddenPrior=method_getImplementation(m);
     class_replaceMethod(cls,hidden,imp_implementationWithBlock(^(UIView *view,BOOL value){ ((void(*)(id,SEL,BOOL))hiddenPrior)(view,hidden,value); NGSystemDock *dock=objc_getAssociatedObject(view,&NGDockPlatterOwnerKey); if (dock && !value && view==dock.platter) [dock nativeExpanded]; }),method_getTypeEncoding(m));
 }
+
+#include "NGDockLegacy.inc"
