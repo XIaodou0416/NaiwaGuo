@@ -40,3 +40,5 @@ cp NaiwaGuo.plist dist/NaiwaGuo.plist
 python3 scripts/package.py
 VERSION=$(awk '/^Version:/ {print $2}' control)
 shasum -a 256 dist/NaiwaGuo.dylib dist/NaiwaGuo.plist "dist/com.naiwaguo.native_${VERSION}_iphoneos-arm.deb" "dist/com.naiwaguo.native_${VERSION}_iphoneos-arm64.deb" > dist/SHA256SUMS.txt
+
+python3 scripts/backup-source.py

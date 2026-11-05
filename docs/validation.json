@@ -1,7 +1,7 @@
 {
-  "version": "0.0.6",
+  "version": "0.0.7",
   "date": "2026-11-05",
-  "releaseStatus": "local candidate; not published to GitHub",
+  "releaseStatus": "private candidate; source backup required; no public GitHub Release",
   "xcode": "27.0 (27A266a)",
   "sdk": "iOS 27.0",
   "simulator": "iPhone 18 Pro / iOS 27.0",
@@ -14,7 +14,7 @@
     "(undefined) weak external _OBJC_CLASS_$_UIGlassEffect (from UIKit)"
   ],
   "fullRegressionPassed": true,
-  "regressionSections": 45,
+  "regressionSections": 48,
   "featureAssertions": {
     "dockColors005": {
       "allThreeModesRetainNormalAndSelectedPixels": true,
@@ -112,6 +112,37 @@
       "fallbackDockUsesFourPublicButtons": true,
       "fallbackRoutesNativeTabOnce": true,
       "fallbackUsesRoundedBlurInsteadOfGlass": true
+    },
+    "danmaku007": {
+      "disableRestoresEntrance": true,
+      "entranceHiddenWithoutHidingDanmakuContent": true,
+      "nativeVisibilityRewritesRemainHidden": true,
+      "preservesNativeHiddenState": true,
+      "settingIsSearchable": true
+    },
+    "authorAccess007": {
+      "confirmedFollowRequiresFreshQueryBeforeUnlock": true,
+      "failedFollowDoesNotUnlock": true,
+      "lockedFeatureListCannotNavigate": true,
+      "lockedReadsMaskFeaturesWithoutDeletingPreferences": true,
+      "lockedStartupPreservesAlreadyMigratedChoices": true,
+      "logoutLocksFeatures": true,
+      "mutualFollowIsAccepted": true,
+      "nativeQueryTargetsExactAuthor": true,
+      "networkWrongAuthorAndMalformedResponsesFailClosed": true,
+      "newSessionLocksBeforeNetworkResult": true,
+      "noFollowMutationBeforeConfirmation": true,
+      "relationListSchemaIsMatchedByAuthorID": true,
+      "runtimeDockLocksAndRestoresSavedChoice": true,
+      "staleAccountResponseCannotUnlock": true,
+      "timedOutResponseCannotUnlockLater": true,
+      "unfollowedStatesRelock": true
+    },
+    "sponsorPrompt007": {
+      "directCloseDoesNotPersistSuppression": true,
+      "exactRequestedTextCodeAndButtons": true,
+      "neverAgainPersistsSuppression": true,
+      "smallPhoneAndTabletButtonsStayReachable": true
     }
   },
   "searchNavigationCases": {
@@ -275,10 +306,10 @@
   "nativeUICases": {
     "font": {
       "passed": 1,
-      "durationSeconds": 4.801053666655207,
+      "durationSeconds": 4.8020586666534655,
       "profileSettingsFontNavigationCycles": 10,
       "mainThreadHeartbeats": 40,
-      "maxHeartbeatGapSeconds": 0.15922045832849108
+      "maxHeartbeatGapSeconds": 0.1219015000096988
     },
     "regular": {
       "collapseSide": 0,
@@ -523,6 +554,34 @@
       }
     }
   },
+  "accessAndSponsorProcessCases": {
+    "access-preview007": {
+      "confirmedFollowUnlocksAfterQuery": true,
+      "passed": 1,
+      "explicitConfirmationBeforeMutation": true,
+      "sponsorHasRequestedContent": true,
+      "lockedListStaysGreyAfterAnimation": true
+    },
+    "sponsor-never-seed007": {
+      "passed": 1,
+      "neverAgainPreferenceRetained": true,
+      "authorizationIndependentFromDonation": true,
+      "noSponsorPresented": true
+    },
+    "sponsor-never-check007": {
+      "passed": 1,
+      "neverAgainPreferenceRetained": true,
+      "authorizationIndependentFromDonation": true,
+      "noSponsorPresented": true
+    },
+    "access-restart007": {
+      "unfollowedRemainsLocked": 1,
+      "passed": 1,
+      "newProcessDoesNotReuseAuthorization": true
+    }
+  },
+  "authorFollowHostAdapterStaticInspection": true,
+  "authorFollowRealAccountServerTested": false,
   "avatarAnimationEndMeasurements": {
     "avatar60": {
       "collapseSide": 3,
@@ -600,8 +659,8 @@
     "unknownActionDoesNotOpen": 1,
     "versionStartsAt001": true
   },
-  "settingsScreenshots": 18,
-  "publicSourcePrivatePathAndSecretScanPassed": true,
+  "settingsScreenshots": 22,
+  "privateSourcePathAndSecretScanPassed": true,
   "physicalDeviceTested": false,
   "lowerIOSRuntimeTested": false,
   "FLEXKingExternalIntegrationTested": false

@@ -901,6 +901,7 @@ static NSDictionary *NGTestPlaybackHeaderGlass(void) {
 #include "NGRegression005Tests.inc"
 #include "NGContinuation005Tests.inc"
 #include "NGRegression006Tests.inc"
+#include "NGRegression007Tests.inc"
 
 static void NGWriteTestResult(NSDictionary *result) {
     NSString *documents = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
@@ -930,6 +931,7 @@ static void NGWriteTestResult(NSDictionary *result) {
 
     NSArray *arguments = NSProcessInfo.processInfo.arguments;
     NGDockForceLegacyTest=[arguments containsObject:@"--legacy-dock006"];
+    for (NSString *mode in @[@"access-preview007",@"sponsor-never-seed007",@"sponsor-never-check007",@"access-restart007"]) if ([arguments containsObject:[@"--" stringByAppendingString:mode]]) { NGRunAccessUI007(self.window,mode);return; }
     if ([arguments containsObject:@"--fresh-defaults005"] || [arguments containsObject:@"--retained-defaults005"]) {
         NGStart();
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW,1.1*NSEC_PER_SEC),dispatch_get_main_queue(),^{ NGRunDefaults005(self.window,[arguments containsObject:@"--retained-defaults005"]); });
@@ -1216,6 +1218,9 @@ static void NGWriteTestResult(NSDictionary *result) {
             @"dockSurface006": NGTestDockSurface006(),
             @"dockAvatarAndInk006": NGTestDockAvatarAndInk006(),
             @"legacyDock006": NGTestLegacyDock006(),
+            @"danmaku007": NGTestDanmaku007(),
+            @"authorAccess007": NGTestAuthorAccess007(),
+            @"sponsorPrompt007": NGTestSponsorPrompt007(),
             @"dockHaptics005": NGTestDockHaptics005(),
             @"episodeToolbar": NGTestEpisodeToolbar(),
             @"dockColors": NGTestDockColors(),
@@ -1260,7 +1265,7 @@ static void NGWriteTestResult(NSDictionary *result) {
 
 int main(int argc, char *argv[]) {
     @autoreleasepool {
-        BOOL retained=[NSProcessInfo.processInfo.arguments containsObject:@"--retained-defaults005"];
+        BOOL retained=[NSProcessInfo.processInfo.arguments containsObject:@"--retained-defaults005"] || [NSProcessInfo.processInfo.arguments containsObject:@"--sponsor-never-check007"] || [NSProcessInfo.processInfo.arguments containsObject:@"--access-restart007"];
         if (!retained) [NSUserDefaults.standardUserDefaults removePersistentDomainForName:NSBundle.mainBundle.bundleIdentifier];
         NGTestFrameworkOriginalInfo = [[NSBundle bundleForClass:UIView.class].infoDictionary copy];
         [NSUserDefaults.standardUserDefaults setObject:@"original" forKey:NGPreferencePlaybackPreset];

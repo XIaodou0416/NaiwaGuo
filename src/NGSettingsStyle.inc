@@ -106,7 +106,7 @@ static BOOL NGSettingsMotionEnabled(void) {
     }
     void (^restore)(void) = ^{
         header.alpha = 1; header.transform = CGAffineTransformIdentity;
-        for (UITableViewCell *cell in cells) { cell.contentView.alpha = 1; cell.contentView.transform = CGAffineTransformIdentity; }
+        for (UITableViewCell *cell in cells) { cell.contentView.alpha = cell.userInteractionEnabled ? 1 : .38; cell.contentView.transform = CGAffineTransformIdentity; }
     };
     BOOL scheduled = [transition animateAlongsideTransition:^(id<UIViewControllerTransitionCoordinatorContext> context) {
         [UIView animateWithDuration:0.48 delay:0 usingSpringWithDamping:0.9 initialSpringVelocity:0.25 options:UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionAllowUserInteraction animations:restore completion:nil];

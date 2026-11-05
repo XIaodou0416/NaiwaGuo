@@ -18,7 +18,7 @@ void NGDRegisterFLEXKingProvider(void);
 #import <math.h>
 
 static NSString *const NGPluginName = @"NaiwaGuo";
-static NSString *const NGVersion = @"0.0.6";
+static NSString *const NGVersion = @"0.0.7";
 static NSString *const NGHostBundleIdentifier = @"com.phoenix.video";
 static NSString *const NGHostExecutable = @"Eggplant";
 static NSString *const NGPrefix = @"com.naiwaguo.";
@@ -33,6 +33,9 @@ static NSString *const NGPreferencePlaybackHeaderGlass = @"com.naiwaguo.playback
 static NSString *const NGPreferenceChannelRestoreMigration = @"com.naiwaguo.migration.restoreChannels.070";
 static NSString *const NGPreferenceRuntimeGlass = @"com.naiwaguo.appearance.runtimeGlass";
 static NSString *const NGIdentifierPrefix = @"NaiwaGuo.";
+
+#include "NGAccessState.inc"
+#include "NGAuthorAccess.inc"
 
 static BOOL NGRuntimeGlassRequested;
 static BOOL NGRuntimeGlassHooksInstalled;
@@ -1222,6 +1225,8 @@ static void NGSetPlaybackHeaderHidden(UIView *view, BOOL hidden) {
     view.hidden = state.sourceHidden || hidden; state.appliedHidden = view.hidden;
 }
 
+#include "NGDanmakuEntrance.inc"
+
 @interface NGPlaybackHeaderGlassState : NSObject
 @property(nonatomic, strong) UIVisualEffectView *glass;
 @property(nonatomic, copy) NSString *kind;
@@ -1368,7 +1373,7 @@ static void NGApplyPlaybackTextPreferences(UIView *view, NSString *kind) {
 static NSArray<NSString *> *NGPlaybackTextClassNames(void) {
     static NSArray<NSString *> *names;
     static dispatch_once_t once;
-    dispatch_once(&once, ^{ names = @[@"SSShortVideoOutterSeriesInfoView", @"SSShortVideoDerivateInfoView", @"SSShortVideoDerivateLeftContainerView", @"SSShortVideoOutterSeriesLeftContainerView", @"SSShortVideoAiUsageView", @"SSShortVideoBottomDistributionTextView", @"SSShortVideoBottomDistributionView", @"FQVShortVideoProgressView", @"FQVTagListView"]; });
+    dispatch_once(&once, ^{ names = @[@"SSShortVideoOutterSeriesInfoView", @"SSShortVideoDerivateInfoView", @"SSShortVideoDerivateLeftContainerView", @"SSShortVideoOutterSeriesLeftContainerView", @"SSShortVideoAiUsageView", @"SSShortVideoBottomDistributionTextView", @"SSShortVideoBottomDistributionView", @"FQVShortVideoProgressView", @"FQVTagListView", @"SSShortVideoDanmakuLeftAboveView", @"FQCShortVideoDanmakuEntranceView"]; });
     return names;
 }
 static void NGDecoratePlaybackTextView(UIView *view) {
@@ -1379,6 +1384,7 @@ static void NGDecoratePlaybackTextView(UIView *view) {
         if ([name containsString:@"BottomDistributionTextView"] || [name isEqualToString:@"SSShortVideoBottomDistributionView"]) NGDecorateCollectionRow(view);
         if ([name isEqualToString:@"FQVShortVideoProgressView"]) NGSetPlaybackHeaderHidden(view, NGPlaybackElementHidden(@"progress"));
         if ([name isEqualToString:@"FQVTagListView"]) NGSetPlaybackHeaderHidden(view, NGPlaybackElementHidden(@"tags"));
+        if (NGIsDanmakuEntranceName(name)) NGDecorateDanmakuEntrance(view);
         if ([name containsString:@"OutterSeriesInfoView"] || [name containsString:@"DerivateInfoView"]) {
             NSString *prefix = @"com.naiwaguo.playback.layout.author";
             CGFloat dx = [NSUserDefaults.standardUserDefaults floatForKey:[prefix stringByAppendingString:@".x"]], dy = [NSUserDefaults.standardUserDefaults floatForKey:[prefix stringByAppendingString:@".y"]];
@@ -1437,6 +1443,7 @@ static void NGInstallPlaybackTextHooks(void) {
         IMP original = method_getImplementation(method);
         IMP replacement = imp_implementationWithBlock(^(UIView *view) { ((void (*)(id, SEL))original)(view, selector); NGDecoratePlaybackTextView(view); });
         if (!class_addMethod(target, selector, replacement, method_getTypeEncoding(method))) class_replaceMethod(target, selector, replacement, method_getTypeEncoding(method));
+        if (NGIsDanmakuEntranceName(name)) NGInstallDanmakuHiddenHook(target);
         [installed addObject:name];
     }
 }
@@ -1856,7 +1863,7 @@ static NSArray<NSArray<NSDictionary *> *> *NGPlaybackVisibilityItems(void) {
     return @[
         @[@{@"key":@"avatar",@"title":@"作者头像"},@{@"key":@"collect",@"title":@"收藏"},@{@"key":@"comment",@"title":@"评论"},@{@"key":@"like",@"title":@"点赞"},@{@"key":@"share",@"title":@"分享"}],
         @[@{@"key":@"header.sidebar",@"title":@"左上角侧边栏"},@{@"key":@"header.search",@"title":@"右上角搜索"}],
-        @[@{@"key":@"text.author",@"title":@"作者名称"},@{@"key":@"text.description",@"title":@"视频简介"},@{@"key":@"text.notice",@"title":@"作者声明 / AI 提示"},@{@"key":@"text.collection",@"title":@"剧集 / 合集信息"},@{@"key":@"progress",@"title":@"播放进度条"},@{@"key":@"tags",@"title":@"视频标签"}]
+        @[@{@"key":@"text.author",@"title":@"作者名称"},@{@"key":@"text.description",@"title":@"视频简介"},@{@"key":@"text.notice",@"title":@"作者声明 / AI 提示"},@{@"key":@"text.collection",@"title":@"剧集 / 合集信息"},@{@"key":@"progress",@"title":@"播放进度条"},@{@"key":@"tags",@"title":@"视频标签"},@{@"key":@"danmakuEntrance",@"title":@"主页发弹幕按钮"}]
     ];
 }
 
@@ -1986,6 +1993,7 @@ static NSArray<NSArray<NSDictionary *> *> *NGPlaybackVisibilityItems(void) {
 @end
 
 #include "NGSupport.inc"
+#include "NGSponsorPrompt.inc"
 
 static NSArray<NSDictionary *> *NGSettingsGroups(void) {
     return @[
@@ -2103,6 +2111,14 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
 @property(nonatomic, copy) NSDictionary *pendingSearchMatch;
 @property(nonatomic, strong) NGBrandHeaderView *brandHeader;
 @property(nonatomic, strong) UIView *supportFooter;
+@property(nonatomic,strong) UIButton *accessBanner;
+@property(nonatomic) BOOL followPromptShown;
+@property(nonatomic) BOOL sponsorPromptConsidered;
+@property(nonatomic) BOOL accessCheckedForEntry;
+- (void)refreshAccessUI;
+- (void)presentSettingsPrompts;
+- (void)checkAuthorAccess;
+- (void)showSponsorPromptIfNeeded;
 @end
 
 @implementation NGSettingsViewController
@@ -2134,18 +2150,68 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
     self.groups = NGSettingsGroups();
     self.searchResults = @[];
     [self installSupportFooter];
+    self.accessBanner=[UIButton buttonWithType:UIButtonTypeSystem]; self.accessBanner.configuration=[UIButtonConfiguration tintedButtonConfiguration]; self.accessBanner.titleLabel.numberOfLines=2; self.accessBanner.titleLabel.textAlignment=NSTextAlignmentCenter; self.accessBanner.accessibilityIdentifier=@"NaiwaGuo.Access.Status";
+    [self.accessBanner addTarget:self action:@selector(checkAuthorAccess) forControlEvents:UIControlEventTouchUpInside]; [self.brandHeader addSubview:self.accessBanner];
+    [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(refreshAccessUI) name:NGAccessChangedNotification object:nil]; [self refreshAccessUI];
 }
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
     self.groups = NGSettingsGroups();
     [self.tableView reloadData];
+    [self refreshAccessUI];
+}
+- (void)viewDidAppear:(BOOL)animated {
+    [super viewDidAppear:animated];
+    if (!self.accessCheckedForEntry) { self.accessCheckedForEntry=YES; NGAccessCheck(); }
+    [self presentSettingsPrompts];
+}
+- (void)dealloc { [NSNotificationCenter.defaultCenter removeObserver:self]; }
+- (void)refreshAccessUI {
+    if (!self.isViewLoaded) return;
+    BOOL allowed=NGAccessAllowed(); self.accessBanner.hidden=allowed;
+    [self.accessBanner setTitle:[NGAccessStatusText() stringByAppendingString:@"\n点此重新检测 / 关注作者"] forState:UIControlStateNormal];
+    self.accessBanner.enabled=NGAccessStatus!=NGAccessChecking;
+    self.navigationItem.searchController.searchBar.userInteractionEnabled=allowed; self.navigationItem.searchController.searchBar.alpha=allowed ? 1 : .4;
+    if (!allowed) {
+        self.pendingSearchMatch=nil; self.navigationItem.searchController.active=NO;
+        if ([self.navigationController.viewControllers containsObject:self] && self.navigationController.topViewController!=self) [self.navigationController popToViewController:self animated:NO];
+    }
+    [self.tableView reloadData]; [self.view setNeedsLayout];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(.4*NSEC_PER_SEC)),dispatch_get_main_queue(), ^{ [self presentSettingsPrompts]; });
+}
+- (void)checkAuthorAccess { self.followPromptShown=NO; NGAccessCheck(); }
+- (void)showSponsorPromptIfNeeded {
+#if NG_TEST
+    if (!NGAccessTestPrompts) return;
+#endif
+    if (self.sponsorPromptConsidered || [NSUserDefaults.standardUserDefaults boolForKey:NGPreferenceSponsorNever] || !self.view.window || self.navigationController.topViewController!=self || self.presentedViewController) return;
+    self.sponsorPromptConsidered=YES; [self presentViewController:[NGSponsorPromptController new] animated:YES completion:nil];
+}
+- (void)presentSettingsPrompts {
+#if NG_TEST
+    if (!NGAccessTestPrompts) return;
+#endif
+    if (!self.view.window || self.navigationController.topViewController!=self || self.presentedViewController || self.isBeingDismissed || self.navigationController.isBeingDismissed) return;
+    if (NGAccessStatus==NGAccessChecking || NGAccessStatus==NGAccessUnknown) return;
+    if (!NGAccessAllowed() && !self.followPromptShown) {
+        self.followPromptShown=YES;
+        BOOL canFollow=NGAccessStatus==NGAccessNotFollowing;
+        NSString *message=canFollow ? [NSString stringWithFormat:@"使用插件前需要关注作者（红果用户 ID：%@）。是否确认关注？确认后会通过红果重新核验，未关注时功能列表保持灰色。",NGAuthorUserID] : [NGAccessStatusText() stringByAppendingString:@"。核验成功前，功能列表保持灰色。"];
+        UIAlertController *alert=[UIAlertController alertControllerWithTitle:canFollow ? @"关注作者后使用" : @"关注状态未确认" message:message preferredStyle:UIAlertControllerStyleAlert];
+        __weak typeof(self) weakSelf=self;
+        [alert addAction:[UIAlertAction actionWithTitle:canFollow ? @"暂不关注" : @"稍后再试" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action){ dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(.4*NSEC_PER_SEC)),dispatch_get_main_queue(),^{[weakSelf showSponsorPromptIfNeeded];}); }]];
+        [alert addAction:[UIAlertAction actionWithTitle:canFollow ? @"确认关注" : @"重新检测" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action){ if (canFollow) NGAccessFollowAuthor(); else { weakSelf.followPromptShown=NO; NGAccessCheck(); } }]];
+        [self presentViewController:alert animated:YES completion:nil]; return;
+    }
+    [self showSponsorPromptIfNeeded];
 }
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
     [self layoutSupportFooter];
     if (self.tableView.tableHeaderView == self.brandHeader) {
         CGFloat width = self.tableView.bounds.size.width;
-        CGFloat height = 80 + MAX(0,self.brandHeader.titleLabel.font.pointSize-20)*2;
+        CGFloat height = 80 + MAX(0,self.brandHeader.titleLabel.font.pointSize-20)*2 + (NGAccessAllowed() ? 0 : 76);
+        self.accessBanner.frame=CGRectMake(16,height-72,MAX(0,width-32),64);
         if (self.brandHeader.frame.size.width != width || self.brandHeader.frame.size.height != height) {
             self.brandHeader.frame = CGRectMake(0, 0, width, height);
             self.tableView.tableHeaderView = self.brandHeader;
@@ -2261,6 +2327,7 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
         cell.detailTextLabel.text = [NSString stringWithFormat:@"%@ · %@", match[@"groupTitle"], row[@"subtitle"]];
         cell.imageView.image = [UIImage systemImageNamed:row[@"symbol"] ?: @"gear"];
         cell.imageView.tintColor = self.groups[[match[@"group"] unsignedIntegerValue]][@"color"] ?: UIColor.systemBlueColor;
+        if (!NGAccessAllowed() && ![@[@"sponsor",@"community"] containsObject:row[@"action"] ?: @""]) { cell.userInteractionEnabled=NO; cell.contentView.alpha=.38; cell.accessibilityTraits|=UIAccessibilityTraitNotEnabled; }
         return cell;
     }
     NSUInteger groupIndex = indexPath.section;
@@ -2273,12 +2340,14 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
     category.tile.tintColor = color;
     category.accessibilityLabel = [NSString stringWithFormat:@"%@，%@", group[@"title"], group[@"subtitle"]];
     category.accessibilityIdentifier = [NSString stringWithFormat:@"NaiwaGuo.Settings.Group.%lu", (unsigned long)indexPath.section];
+    if (!NGAccessAllowed()) { category.userInteractionEnabled=NO; category.contentView.alpha=.38; category.accessibilityTraits|=UIAccessibilityTraitNotEnabled; }
     return category;
 }
+- (NSIndexPath *)tableView:(UITableView *)tableView willSelectRowAtIndexPath:(NSIndexPath *)path { return NGAccessAllowed() ? path : nil; }
 - (void)openPendingSearchResult {
     NSDictionary *match = self.pendingSearchMatch;
     self.pendingSearchMatch = nil;
-    if (!match || self.navigationController.topViewController != self) return;
+    if (!NGAccessAllowed() || !match || self.navigationController.topViewController != self) return;
     NSUInteger groupIndex = [match[@"group"] unsignedIntegerValue];
     if (groupIndex >= self.groups.count) return;
     NSDictionary *row = match[@"row"];
@@ -2302,7 +2371,7 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
 }
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
-    if (self.pendingSearchMatch || self.navigationController.topViewController != self) return;
+    if (!NGAccessAllowed() || self.pendingSearchMatch || self.navigationController.topViewController != self) return;
     if ([self isSearching]) {
         if (indexPath.row < 0 || (NSUInteger)indexPath.row >= self.searchResults.count) return;
         self.pendingSearchMatch = self.searchResults[indexPath.row];
@@ -2481,6 +2550,7 @@ static void NGInstallLifecycleHooks(void) {
         }));
         [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidBecomeActiveNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
             NGLog(@"lifecycle", @"foreground", nil);
+            NGInstallAuthorAccessHooks(); NGAccessCheck();
             [NGPerformanceRecorder.shared resume];
             NGInstallOverlay();
             
@@ -2522,8 +2592,13 @@ static void NGRemoveRetiredPlaybackPreferences(NSUserDefaults *defaults) {
         [defaults removeObjectForKey:key];
 }
 
+static void NGRefreshAfterAccessChange(void) {
+    NGLoadTypographyFont(); NGRefreshTypography(); NGUpdateDock(); NGUpdatePlaybackGlass(); NGUpdatePlaybackHeaderGlass(); NGUpdateCommentGlass(); NGUpdatePlaybackFullscreen(); NGUpdatePlaybackTextLayout(); NGRefreshPlaybackCorners(); NGInstallOverlay(); NGDAudioProbePreferenceDidChange();
+}
+
 static void NGStart(void) {
     if (!NGIsHostApp()) return;
+    NGInstallAuthorAccessHooks();
     NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
     NGRemoveRetiredPlaybackPreferences(defaults);
     [defaults registerDefaults:@{
@@ -2565,7 +2640,7 @@ static void NGStart(void) {
 #endif
     NGDAudioHooksInstall(); NGDDebugInspectorInstall(); NGDRegisterFLEXKingProvider();
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.7 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        NGInstallOverlay();
+        NGAccessCheck(); NGInstallOverlay();
         
         NGInstallPlaybackGlassHook();
         NGUpdatePlaybackGlass();
@@ -2584,6 +2659,7 @@ static void NGStart(void) {
 #ifndef NG_TEST
 __attribute__((constructor)) static void NGNaiwaGuoEntry(void) {
     @autoreleasepool {
+        if (NGIsHostApp()) NGInstallAccessPreferenceHooks();
         NGPrepareRuntimeGlass();
         if (NGIsHostApp()) { NGDAudioHooksInstall(); NGDAudioProbeInstallIfEnabled(YES); }
         dispatch_async(dispatch_get_main_queue(), ^{ NGStart(); });
