@@ -64,8 +64,13 @@ static void NGAccessCheck(void) {
 #if NG_TEST
     if (NGAccessTestBypass) return;
 #endif
-    NSUInteger generation=++NGAccessGeneration; NGAccessVerifiedAccount=nil; NGAccessSetState(NGAccessChecking,nil);
-    NSString *account=NGAccessAccountID(); if (!account.length) { NGAccessSetState(NGAccessUnavailable,@"请先在红果登录，再点此重新检测"); return; }
+    NSUInteger generation=++NGAccessGeneration; NGAccessVerifiedAccount=nil;
+    NSString *account=NGAccessAccountID();
+    if ([account isEqualToString:NGAuthorUserID]) {
+        NGAccessVerifiedAccount=[account copy]; NGAccessSetState(NGAccessAuthor,nil); return;
+    }
+    NGAccessSetState(NGAccessChecking,nil);
+    if (!account.length) { NGAccessSetState(NGAccessUnavailable,@"请先在红果登录，再点此重新检测"); return; }
     id service=NSClassFromString(@"SSUgcApiService"); SEL selector=NSSelectorFromString(@"getUserRelation:completion:");
     if (!NGAccessRPCCompatible(service,selector)) { NGAccessSetState(NGAccessUnavailable,@"当前红果版本暂不支持关注校验"); return; }
     void (^configure)(id)=^(id request){

@@ -31,6 +31,6 @@ for pair in "regular dock-regular" "clear dock-clear" "left dock-left" "right do
 done
 sips -Z 1300 dist/simulator-validation/debug-menu-003.png --out "$OUT/debug-menu.png" >/dev/null
 
-for name in author-follow-prompt007 sponsor-prompt007 author-locked-settings007 author-unlocked-settings007; do
+for name in author-follow-prompt007 sponsor-prompt007 author-locked-settings007 author-unlocked-settings007 author-self-settings008; do
   sips -Z 1300 "dist/simulator-validation/$name.png" --out "$OUT/$name.png" >/dev/null
 done

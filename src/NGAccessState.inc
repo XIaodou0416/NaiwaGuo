@@ -2,7 +2,7 @@
 #import <stdatomic.h>
 static NSString *const NGAuthorUserID = @"106173406210";
 static NSString *const NGAccessChangedNotification = @"NaiwaGuo.Access.Changed";
-typedef NS_ENUM(NSInteger, NGAccessState) { NGAccessUnknown, NGAccessChecking, NGAccessNotFollowing, NGAccessFollowing, NGAccessUnavailable };
+typedef NS_ENUM(NSInteger, NGAccessState) { NGAccessUnknown, NGAccessChecking, NGAccessNotFollowing, NGAccessFollowing, NGAccessUnavailable, NGAccessAuthor };
 static NGAccessState NGAccessStatus=NGAccessUnknown;
 static atomic_bool NGAccessVerified;
 static NSUInteger NGAccessGeneration;
@@ -40,14 +40,16 @@ static void NGInstallAccessPreferenceHooks(void) {
 }
 static void NGAccessSetState(NGAccessState state,NSString *failure) {
     NSCAssert(NSThread.isMainThread,@"Access state must update on the main thread");
-    BOOL previous=atomic_exchange(&NGAccessVerified,state==NGAccessFollowing);
+    BOOL allowed=state==NGAccessFollowing || state==NGAccessAuthor;
+    BOOL previous=atomic_exchange(&NGAccessVerified,allowed);
     NGAccessStatus=state; NGAccessFailure=[failure copy];
-    if (previous!=(state==NGAccessFollowing)) NGRefreshAfterAccessChange();
+    if (previous!=allowed) NGRefreshAfterAccessChange();
     [NSNotificationCenter.defaultCenter postNotificationName:NGAccessChangedNotification object:nil];
 }
 static NSString *NGAccessStatusText(void) {
     switch (NGAccessStatus) {
         case NGAccessFollowing:return @"已确认关注作者，功能已解锁";
+        case NGAccessAuthor:return @"当前为作者本人账号，功能已解锁";
         case NGAccessChecking:return @"正在核对关注状态，功能暂不可用";
         case NGAccessNotFollowing:return @"关注作者后可使用插件功能";
         case NGAccessUnavailable:return NGAccessFailure ?: @"暂时无法核对关注状态，请重试";

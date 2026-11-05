@@ -1,5 +1,5 @@
 {
-  "version": "0.0.7",
+  "version": "0.0.8",
   "date": "2026-11-05",
   "releaseStatus": "private candidate; source backup required; no public GitHub Release",
   "xcode": "27.0 (27A266a)",
@@ -14,7 +14,7 @@
     "(undefined) weak external _OBJC_CLASS_$_UIGlassEffect (from UIKit)"
   ],
   "fullRegressionPassed": true,
-  "regressionSections": 48,
+  "regressionSections": 49,
   "featureAssertions": {
     "dockColors005": {
       "allThreeModesRetainNormalAndSelectedPixels": true,
@@ -143,6 +143,16 @@
       "exactRequestedTextCodeAndButtons": true,
       "neverAgainPersistsSuppression": true,
       "smallPhoneAndTabletButtonsStayReachable": true
+    },
+    "authorSelfAccess008": {
+      "accountChangeImmediatelyRevokesExemption": true,
+      "authorIDMustMatchExactly": true,
+      "authorUsesSavedFeaturesWithoutSelfFollowOrRelationNetwork": true,
+      "loggedOutAuthorIDDoesNotUnlock": true,
+      "nativeNumericAuthorIDIsAccepted": true,
+      "otherAccountStillRequiresFollow": true,
+      "recheckingAuthorDoesNotTemporarilyLock": true,
+      "staleOtherAccountResponseCannotRevokeAuthor": true
     }
   },
   "searchNavigationCases": {
@@ -306,10 +316,10 @@
   "nativeUICases": {
     "font": {
       "passed": 1,
-      "durationSeconds": 4.8020586666534655,
+      "durationSeconds": 4.801064166676952,
       "profileSettingsFontNavigationCycles": 10,
       "mainThreadHeartbeats": 40,
-      "maxHeartbeatGapSeconds": 0.1219015000096988
+      "maxHeartbeatGapSeconds": 0.12105933332350105
     },
     "regular": {
       "collapseSide": 0,
@@ -578,6 +588,18 @@
       "unfollowedRemainsLocked": 1,
       "passed": 1,
       "newProcessDoesNotReuseAuthorization": true
+    },
+    "author-self008": {
+      "savedFeaturesAvailableAfterRestart": 1,
+      "passed": 1,
+      "noSelfFollowOrRelationQuery": true,
+      "authorSettingsUnlockedWithoutFollowPrompt": 1
+    },
+    "author-self-restart008": {
+      "savedFeaturesAvailableAfterRestart": 1,
+      "passed": 1,
+      "noSelfFollowOrRelationQuery": true,
+      "authorSettingsUnlockedWithoutFollowPrompt": 1
     }
   },
   "authorFollowHostAdapterStaticInspection": true,
@@ -659,7 +681,7 @@
     "unknownActionDoesNotOpen": 1,
     "versionStartsAt001": true
   },
-  "settingsScreenshots": 22,
+  "settingsScreenshots": 23,
   "privateSourcePathAndSecretScanPassed": true,
   "physicalDeviceTested": false,
   "lowerIOSRuntimeTested": false,

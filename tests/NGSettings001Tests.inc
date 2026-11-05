@@ -15,7 +15,7 @@
 static NSDictionary *NGTestSettings001(void) {
     NSMutableDictionary *checks = [NSMutableDictionary dictionary];
     NSArray *groups = NGSettingsGroups(); NSArray *rows = groups.lastObject[@"rows"];
-    checks[@"versionStartsAt001"] = @([NGVersion isEqualToString:@"0.0.7"]);
+    checks[@"versionStartsAt001"] = @([NGVersion isEqualToString:@"0.0.8"]);
     checks[@"fiveGroupsWithoutAuthorCategory"] = @(groups.count == 5 && rows.count == 1 && ![[groups valueForKey:@"title"] containsObject:@"作者与交流"]);
     NSArray *actions = @[@"qqGroup",@"tgNews",@"tgChat"];
     NSArray *links = @[@"https://qm.qq.com/q/w9rb2DnAoE",@"https://t.me/beans0416",@"https://t.me/beans1011"];
@@ -102,7 +102,7 @@ static NSDictionary *NGTestSettings001(void) {
     checks[@"sameOpenPageFollowsSystemTheme"] = @(![light isEqual:dark] && home.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark);
     window.overrideUserInterfaceStyle = UIUserInterfaceStyleLight; [window setNeedsLayout]; [window layoutIfNeeded]; [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.06]]; [nav.view layoutIfNeeded];
     checks[@"switchBackToLightWorks"] = @([[home.tableView.backgroundColor resolvedColorWithTraitCollection:home.traitCollection] isEqual:light]);
-    checks[@"newAdaptiveHeroAndVersionBadge"] = @([home.brandHeader.badgeLabel.text isEqualToString:@"v0.0.7"] && home.tableView.backgroundView == nil && home.brandHeader.bounds.size.height <= 100);
+    checks[@"newAdaptiveHeroAndVersionBadge"] = @([home.brandHeader.badgeLabel.text isEqualToString:@"v0.0.8"] && home.tableView.backgroundView == nil && home.brandHeader.bounds.size.height <= 100);
     BOOL cardLayout = YES;
     for (NSUInteger i=0;i<5;i++) {
         NSIndexPath *path = [NSIndexPath indexPathForRow:0 inSection:i]; NGSettingsCategoryCell *cell = (id)[home tableView:home.tableView cellForRowAtIndexPath:path];
