@@ -33,7 +33,7 @@ static NSString *const NGPreferencePlaybackHeaderGlass = @"com.naiwaguo.playback
 static NSString *const NGPreferenceChannelRestoreMigration = @"com.naiwaguo.migration.restoreChannels.070";
 static NSString *const NGPreferenceRuntimeGlass = @"com.naiwaguo.appearance.runtimeGlass";
 static NSString *const NGIdentifierPrefix = @"NaiwaGuo.";
-#include "NGFeatureAccess.inc"
+#include "NGPreferences.inc"
 
 static BOOL NGRuntimeGlassRequested;
 static BOOL NGRuntimeGlassHooksInstalled;
@@ -1996,7 +1996,6 @@ static NSArray<NSArray<NSDictionary *> *> *NGPlaybackVisibilityItems(void) {
 
 #include "NGSupport.inc"
 #include "NGSponsorPrompt.inc"
-#include "NGUsage.inc"
 #include "NGSettingsBackup.inc"
 
 static NSArray<NSDictionary *> *NGSettingsGroups(void) {
@@ -2037,7 +2036,6 @@ static NSArray<NSDictionary *> *NGSettingsGroups(void) {
 }
 
 static NSUInteger NGEnabledFeatureCount(void) {
-    if (NGBlocked) return 0;
     NSDictionary *values=[NSUserDefaults.standardUserDefaults persistentDomainForName:NSBundle.mainBundle.bundleIdentifier] ?: @{};
     NSUInteger count=0;
     for (NSString *key in values) {
@@ -2138,7 +2136,6 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
 @property(nonatomic, strong) NGBrandHeaderView *brandHeader;
 @property(nonatomic, strong) UIView *supportFooter;
 @property(nonatomic) BOOL sponsorPromptConsidered;
-@property(nonatomic) BOOL blockedPromptShown;
 - (void)showSponsorPromptIfNeeded;
 @end
 
@@ -2176,7 +2173,7 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
     [super viewWillAppear:animated];
     self.groups = NGSettingsGroups();
     self.brandHeader.subtitleLabel.text=[NSString stringWithFormat:@"已开启 %lu 项功能",(unsigned long)NGEnabledFeatureCount()];
-    NGUsageSend(YES);
+
     [self.tableView reloadData];
 }
 - (void)viewDidAppear:(BOOL)animated {
@@ -2188,26 +2185,8 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
     if (!NGSponsorTestPrompts) return;
 #endif
     if (!self.view.window || self.navigationController.topViewController!=self || self.presentedViewController || self.isBeingDismissed || self.navigationController.isBeingDismissed) return;
-    if (NGBlocked) { [self showBlockedPrompt];return; }
     if (self.sponsorPromptConsidered || NGFeatureBool(NGPreferenceSponsorNever) || !self.view.window || self.navigationController.topViewController!=self || self.presentedViewController) return;
     self.sponsorPromptConsidered=YES; [self presentViewController:[NGSponsorPromptController new] animated:YES completion:nil];
-}
-- (void)showBlockedPrompt {
-    if (!NGBlocked || self.blockedPromptShown || !self.view.window || self.presentedViewController) return;
-    self.blockedPromptShown=YES;
-    UIAlertController *alert=[UIAlertController alertControllerWithTitle:@"已被拉黑" message:@"当前红果账号已被作者封禁，无法使用奶蛙。" preferredStyle:UIAlertControllerStyleAlert];
-    [alert addAction:[UIAlertAction actionWithTitle:@"知道了" style:UIAlertActionStyleDefault handler:nil]];
-    [self presentViewController:alert animated:YES completion:nil];
-}
-- (void)applyFeatureAccess {
-    [super applyFeatureAccess];
-    self.brandHeader.subtitleLabel.text=[NSString stringWithFormat:@"已开启 %lu 项功能",(unsigned long)NGEnabledFeatureCount()];
-    self.navigationItem.searchController.searchBar.userInteractionEnabled=!NGBlocked;
-    self.navigationItem.searchController.searchBar.alpha=NGBlocked ? .42 : 1;
-    if (!NGBlocked) { self.blockedPromptShown=NO;return; }
-    self.pendingSearchMatch=nil;self.navigationItem.searchController.active=NO;
-    if (self.navigationController.topViewController!=self && [self.navigationController.viewControllers containsObject:self]) [self.navigationController popToViewController:self animated:NO];
-    if (self.presentedViewController) [self dismissViewControllerAnimated:NO completion:^{[self showBlockedPrompt];}];else [self showBlockedPrompt];
 }
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
@@ -2264,7 +2243,6 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
     }
 }
 - (void)supportFooterTapped:(UIButton *)button {
-    if (NGBlocked) return;
     if (self.navigationController.topViewController != self || self.navigationController.transitionCoordinator) return;
     NGSettingsFeedback();
     NSString *action = button.tag == 1 ? @"sponsor" : @"community";
@@ -2344,7 +2322,6 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
     return category;
 }
 - (void)openPendingSearchResult {
-    if (NGBlocked) return;
     NSDictionary *match = self.pendingSearchMatch;
     self.pendingSearchMatch = nil;
     if (!match || self.navigationController.topViewController != self) return;
@@ -2371,7 +2348,6 @@ static UIViewController *NGSettingsDestinationForAction(NSString *action) {
 }
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
-    if (NGBlocked) return;
     if (self.pendingSearchMatch || self.navigationController.topViewController != self) return;
     if ([self isSearching]) {
         if (indexPath.row < 0 || (NSUInteger)indexPath.row >= self.searchResults.count) return;
@@ -2551,7 +2527,7 @@ static void NGInstallLifecycleHooks(void) {
         }));
         [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidBecomeActiveNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
             NGLog(@"lifecycle", @"foreground", nil);
-            NGUsageForeground();
+
             NGInstallSettingsGesture();
             [NGPerformanceRecorder.shared resume];
             NGInstallOverlay();
@@ -2597,6 +2573,7 @@ static void NGRemoveRetiredPlaybackPreferences(NSUserDefaults *defaults) {
 static void NGStart(void) {
     if (!NGIsHostApp()) return;
     NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+    NGRemoveRetiredServicePreferences(defaults);
     NGRemoveRetiredPlaybackPreferences(defaults);
     [defaults registerDefaults:@{
         NGPreferenceHUD: @NO,
@@ -2616,7 +2593,7 @@ static void NGStart(void) {
         NGPreferencePlaybackPreset: @"original"
     }];
     NGRestoreLegacyTopChannels(defaults);
-    NGUsageSyncAccess();
+
     NGPrepareRuntimeGlass();
     NGLoadTypographyFont(); NGInstallTypographyHooks(); NGRefreshTypography();
     NGInstallLifecycleHooks();
@@ -2638,7 +2615,7 @@ static void NGStart(void) {
 #endif
     NGDAudioHooksInstall(); NGDDebugInspectorInstall(); NGDRegisterFLEXKingProvider();
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.7 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        NGInstallOverlay(); NGUsageStart();NGInstallSettingsGesture();
+        NGInstallOverlay(); NGInstallSettingsGesture();
         
         NGInstallPlaybackGlassHook();
         NGUpdatePlaybackGlass();

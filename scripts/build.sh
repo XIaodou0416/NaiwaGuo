@@ -3,7 +3,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p build dist
 export CLANG_MODULE_CACHE_PATH="$PWD/build/ModuleCache"
-SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+source scripts/toolchain.sh
+ng_require_xcode
+SDK=$(ng_sdk_path iphoneos)
 source scripts/debug-objects.sh
 ng_build_debug_objects iphoneos "arm64" -miphoneos-version-min=15.0 device
 xcrun --sdk iphoneos clang \

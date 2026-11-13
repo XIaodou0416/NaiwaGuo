@@ -2,9 +2,9 @@
 
 红果短剧 iOS 原生界面定制插件。简洁设置、跟随系统浅深色、单色线性图标与黑白自适应控件。
 
-**当前版本：0.1.1 · 预发布，真机效果待补充。** 项目现为私人维护，源码仅用于内部备份。基于红果 7.4.3 接口适配，目标为 com.phoenix.video / Eggplant。
+**当前版本：0.1.1 · 开源源码版，编译与真机效果待验证。** 基于红果 7.4.3 接口适配，目标为 com.phoenix.video / Eggplant。
 
-[私人仓库](https://github.com/XIaodou0416/NaiwaGuo) · [安装说明](INSTALL.md) · [验证记录](docs/VALIDATION.md) · [免责声明](DISCLAIMER.md)
+[开源仓库](https://github.com/XIaodou0416/NaiwaGuo) · [安装说明](INSTALL.md) · [验证记录](docs/VALIDATION.md) · [免责声明](DISCLAIMER.md)
 
 ## 插件功能
 
@@ -23,22 +23,11 @@
 
 字段与限制见 [调试工具说明](docs/DEBUG_TOOLS.md)。没有取得可读 PCM 时会写明实际观测和覆盖情况，不伪造 WAV。
 
-## 0.1.1 更新
-
-- 恢复单色线性图标，移除彩色方块与墨绿色强调色；浅色黑色、深色白色。
-- 设置整理为播放与画面、底栏设置、玻璃与面板、图标与文字、备份与恢复、工具与诊断六类；搜索继续直达具体设置。
-- 首页点击“备份与恢复”直接显示导出和恢复两个操作，保留原有文件格式和恢复确认，不再多点一次。
-- 删除客户端统计说明页面及弹窗，后台自动统计继续运行；首页显示“已开启 N 项功能”。
-- 原 Naiwa 管理台支持按红果 ID 封禁和解除。0.1.1 客户端检测到封禁后暂停插件效果，设置置灰并提示“已被拉黑”，解除后恢复原配置。
-- 默认支持软件内双指长按约 0.65 秒打开功能列表，不增加开关。
-- 分类数据缓存和单元格复用，删除图标位图重绘、无关效果刷新及多余说明；测试专用诊断不进入设备构建。
-- 保留中文名称、纯文字入口、隐藏发弹幕入口、底栏修复、赞助提示与 iOS 15+。仓库继续私有，每版独立备份完整源码。
-
-备份入口：首页“备份与恢复”。后台接口、数据口径和封禁限制见 [backend/README.md](backend/README.md)。
-
 ## 安装与开发
 
-仓库只用于私人维护。安装文件与源码备份分开存放；源码不作为公开附件发布。每次构建自动保存至 dist/private-backups/版本号/，不会覆盖旧快照。不要同时加载多个版本；升级后完全退出红果再打开。详见 [安装说明](INSTALL.md)。
+已移除用户数量统计、自动上报和远程封禁，不需要作者服务器。设置与诊断文件保存在本机，由用户自行导出。
+
+项目已开源，可从仓库或 Releases 获取源码。0.1.1 发布源码及校验和，安装文件需在具备 iOS SDK 的 macOS 上自行构建。不要同时加载多个版本；升级后完全退出红果再打开。详见 [安装说明](INSTALL.md)。
 
 构建需要 macOS、带 iOS 26 或更新 SDK 的 Xcode、Python 3；测试需要 iPhone 模拟器。
 
@@ -50,10 +39,12 @@ bash scripts/test-defaults.sh
 bash scripts/test-search-navigation.sh
 bash scripts/test-native-ui.sh
 bash scripts/test-debug-tools.sh
-python3 -m unittest discover -s backend -v
+bash scripts/test-settings-gesture.sh
+bash scripts/test-local-preferences.sh
+python3 -m unittest discover -s tests -p 'test_*.py' -v
 ~~~
 
-测试优先选择已启动的 iPhone 模拟器，也可设置 NG_SIM_DEVICE。测试自带原创图标，默认不需要宿主 IPA；NG_TEST_IPA 仅供本机可选图标读取。构建与测试输出在 dist/，不提交宿主二进制和个人采集包。私人备份规则见 [AGENTS.md](AGENTS.md)。
+测试优先选择已启动的 iPhone 模拟器，也可设置 NG_SIM_DEVICE。测试自带原创图标，默认不需要宿主 IPA；NG_TEST_IPA 仅供本机可选图标读取。构建与测试输出在 dist/，不提交宿主二进制和个人采集包。维护规则见 [AGENTS.md](AGENTS.md)。
 
 ## 参考项目与致谢
 
